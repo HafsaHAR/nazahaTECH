@@ -1,0 +1,268 @@
+.app-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 2rem;
+  background-color: #18181b;
+  color: #ffffff;
+  border-bottom: 1px solid #27272a;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-logo-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.navbar-logo-badge {
+  background-color: #ffffff;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.navbar-logo-badge img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.navbar-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.navbar-sub {
+  font-size: 0.75rem;
+  color: #a1a1aa;
+}
+
+/* Desktop actions */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navbar-actions--desktop {
+  display: flex;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.user-greeting {
+  font-size: 0.95rem;
+  color: #f4f4f5;
+}
+
+.user-role-badge {
+  background-color: rgba(0, 104, 55, 0.25);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.btn-logout {
+  background-color: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.auth-links {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-nav-login {
+  color: #e4e4e7;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.5rem 0.85rem;
+}
+
+.btn-nav-login:hover {
+  color: #ffffff;
+}
+
+.btn-nav-register {
+  background-color: #006837;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.btn-nav-register:hover {
+  background-color: #00502a;
+}
+
+.btn-nav-visitor {
+  color: #a1a1aa;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 400;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #3f3f46;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-nav-visitor:hover {
+  color: #e4e4e7;
+  border-color: #71717a;
+}
+
+/* Hamburger button — hidden on desktop */
+.navbar-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.navbar-hamburger:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.hamburger-line {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background-color: #ffffff;
+  border-radius: 2px;
+  transition: all 0.25s ease;
+}
+
+/* Mobile dropdown menu */
+.navbar-mobile-menu {
+  display: none;
+  width: 100%;
+  flex-direction: column;
+  background-color: #1f1f23;
+  border-top: 1px solid #27272a;
+  padding: 0.75rem 0;
+  margin-top: 0.5rem;
+}
+
+.mobile-menu-item {
+  display: block;
+  padding: 0.85rem 1.5rem;
+  color: #e4e4e7;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.mobile-menu-item:hover {
+  background-color: rgba(255,255,255,0.06);
+}
+
+.mobile-menu-register {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.mobile-menu-logout {
+  color: #ef4444;
+  font-weight: 600;
+  width: 100%;
+}
+
+.mobile-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.5rem;
+  border-bottom: 1px solid #27272a;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-user-name {
+  color: #f4f4f5;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* ─── RESPONSIVE BREAKPOINTS ─── */
+
+@media (max-width: 768px) {
+  .app-navbar {
+    padding: 0.85rem 1.25rem;
+  }
+
+  /* Hide desktop nav links */
+  .navbar-actions--desktop {
+    display: none;
+  }
+
+  /* Show hamburger */
+  .navbar-hamburger {
+    display: flex;
+  }
+
+  /* Show mobile menu when active */
+  .navbar-mobile-menu {
+    display: flex;
+  }
+
+  .user-greeting {
+    display: none;
+  }
+}

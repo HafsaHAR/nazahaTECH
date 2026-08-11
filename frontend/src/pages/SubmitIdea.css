@@ -1,0 +1,134 @@
+.submit-idea-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-top: 4px solid var(--primary-gold);
+  border-radius: 16px;
+  padding: 2.5rem;
+  max-width: 800px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.submit-header {
+  margin-bottom: 2rem;
+}
+
+.submit-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.submit-sub {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-top: 0.35rem;
+}
+
+.challenge-reward-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--primary-gold-light);
+  border: 1px solid var(--primary-gold-border);
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.reward-label {
+  font-size: 0.85rem;
+  color: #92400e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.reward-amount {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+  margin-top: 0.2rem;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  background-color: #ffffff;
+  color: #111827;
+  box-sizing: border-box;
+  min-height: 160px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group textarea:focus {
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px rgba(0, 104, 55, 0.12);
+}
+
+.form-group select {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  background-color: #ffffff;
+  color: #111827;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  cursor: pointer;
+}
+
+.form-group select:focus {
+  border-color: var(--primary-green);
+}
+
+.submit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.btn-cancel {
+  background-color: #f3f4f6;
+  color: #374151;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-submit-green {
+  background: linear-gradient(135deg, var(--primary-green) 0%, #004d28 100%);
+  color: #ffffff;
+  padding: 0.75rem 1.75rem;
+  border-radius: 10px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 104, 55, 0.2);
+}
+
+.btn-submit-green:hover {
+  background: linear-gradient(135deg, #007a41 0%, var(--primary-green) 100%);
+  transform: translateY(-1px);
+}

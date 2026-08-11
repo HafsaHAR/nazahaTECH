@@ -1,0 +1,40 @@
+.admin-challenge-form-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-top: 5px solid var(--primary-green);
+  border-radius: 18px;
+  padding: 2rem 2.25rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.admin-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 0.85rem;
+}
+
+.admin-form-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.btn-close-form {
+  background-color: #f3f4f6;
+  border: none;
+  color: #4b5563;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-close-form:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}

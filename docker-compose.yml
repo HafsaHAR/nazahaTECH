@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: nazahatech-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: nazahatech
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - nazahatech-network
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: nazahatech-mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: pass
+    depends_on:
+      - mongodb
+    networks:
+      - nazahatech-network
+
+  backend:
+    build: ./backend
+    container_name: nazahatech-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/nazahatech
+      JWT_SECRET: nazahatech_jwt_secret_key_2026
+      CORS_ORIGIN: "*"
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+    networks:
+      - nazahatech-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  nazahatech-network:
+    driver: bridge
