@@ -302,9 +302,49 @@ const getChallengeById = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get all participant submissions for a specific challenge (Admin only)
+ * @route   GET /api/challenges/:id/submissions
+ * @access  Private (Admin required)
+ */
+const getChallengeSubmissions = async (req, res) => {
+  try {
+    const challengeId = req.params.id;
+    const Participation = require('../models/Participation');
+
+    const participations = await Participation.find({ challengeId })
+      .populate('userId', 'firstName lastName email role')
+      .populate('ideaId')
+      .sort({ createdAt: -1 });
+
+    const submissions = participations.map((p) => ({
+      _id: p._id,
+      participant: p.userId
+        ? {
+            _id: p.userId._id,
+            name: `${p.userId.firstName} ${p.userId.lastName}`.trim() || p.userId.email,
+            email: p.userId.email
+          }
+        : { name: 'Citoyen INPPLC', email: 'anonyme@nazahatech.ma' },
+      submittedIdea: p.ideaId || null,
+      status: p.status || 'pending',
+      createdAt: p.createdAt
+    }));
+
+    return res.status(200).json({
+      count: submissions.length,
+      submissions
+    });
+  } catch (error) {
+    console.error('Erreur récupération soumissions du défi :', error);
+    return res.status(500).json({ message: 'Erreur lors du chargement des soumissions au défi.' });
+  }
+};
+
 module.exports = {
   createChallenge,
   toggleBookmark,
   getChallenges,
-  getChallengeById
+  getChallengeById,
+  getChallengeSubmissions
 };

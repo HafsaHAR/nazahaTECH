@@ -1,0 +1,171 @@
+.library-container {
+  padding: 2rem 2.5rem;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.library-filter-panel {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
+}
+
+.doc-type-pills-row {
+  display: flex;
+  gap: 0.65rem;
+  overflow-x: auto;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 1.25rem;
+}
+
+.doc-pill {
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4b5563;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.doc-pill:hover {
+  background-color: var(--primary-green-light);
+  border-color: var(--primary-green);
+  color: var(--primary-green);
+}
+
+.doc-pill.active {
+  background-color: var(--primary-green);
+  color: #ffffff;
+  border-color: var(--primary-green);
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.doc-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.doc-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+}
+
+.doc-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.doc-ext-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.doc-ext-badge.pdf {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.doc-ext-badge.docx {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.doc-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.35;
+  margin-bottom: 0.4rem;
+}
+
+.doc-desc {
+  font-size: 0.875rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.doc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 1rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.btn-download-doc {
+  background-color: var(--primary-green);
+  color: #ffffff;
+  border: none;
+  padding: 0.55rem 1.1rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background-color 0.2s;
+}
+
+.btn-download-doc:hover {
+  background-color: var(--primary-green-hover);
+}
+
+/* Thème Sombre Overrides */
+[data-theme="dark"] .library-filter-panel,
+[data-theme="dark"] .doc-card {
+  background-color: #161a22 !important;
+  border-color: #222936 !important;
+}
+
+[data-theme="dark"] .doc-title {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .doc-desc {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .doc-pill {
+  background-color: #0d0f12 !important;
+  border-color: #222936 !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .doc-pill.active {
+  background-color: var(--primary-green) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 900px) {
+  .docs-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}

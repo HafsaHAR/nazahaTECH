@@ -63,12 +63,10 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Champ virtuel 'name' combinant prénom et nom
 userSchema.virtual('name').get(function () {
   return `${this.firstName} ${this.lastName}`.trim();
 });
 
-// Hachage du mot de passe avant la sauvegarde en base de données
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
@@ -80,12 +78,10 @@ userSchema.pre('save', async function (next) {
   }
 });
 
-// Méthode pour vérifier si le mot de passe saisi correspond au mot de passe haché
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Suppression du mot de passe lors de la sérialisation en JSON
 userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
   delete userObject.password;

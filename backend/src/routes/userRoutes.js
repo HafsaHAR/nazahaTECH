@@ -4,7 +4,8 @@ const {
   getUserIdeas,
   getUserComments,
   getUserChallenges,
-  getUserInteractions
+  getUserInteractions,
+  getParticipantChallengeSubmissions
 } = require('../controllers/authController');
 const { protect } = require('../middlewares/authMiddleware');
 
@@ -13,5 +14,6 @@ router.get('/me/ideas', protect, getUserIdeas);
 router.get('/me/comments', protect, getUserComments);
 router.get('/me/challenges', protect, getUserChallenges);
 router.get('/me/interactions', protect, getUserInteractions);
+router.get('/me/challenge-submissions', protect, getParticipantChallengeSubmissions);
 
 module.exports = router;

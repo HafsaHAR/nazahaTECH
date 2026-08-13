@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Idea = require('../models/Idea');
 const Comment = require('../models/Comment');
@@ -394,6 +395,48 @@ const getUserInteractions = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get participant's challenge submissions history (Challenge + Idea + Status)
+ * @route   GET /api/users/me/challenge-submissions
+ * @access  Private (JWT)
+ */
+const getParticipantChallengeSubmissions = async (req, res) => {
+  try {
+    const participations = await Participation.find({ userId: req.user._id })
+      .populate('ideaId')
+      .sort({ createdAt: -1 });
+
+    const submissions = await Promise.all(
+      participations.map(async (p) => {
+        let challengeDoc = null;
+        if (p.challengeId) {
+          if (mongoose.Types.ObjectId.isValid(p.challengeId)) {
+            challengeDoc = await Challenge.findById(p.challengeId).select('title reward category status organization');
+          } else {
+            challengeDoc = await Challenge.findOne({ _id: p.challengeId }).select('title reward category status organization');
+          }
+        }
+
+        return {
+          _id: p._id,
+          challenge: challengeDoc || { title: `Défi #${p.challengeId}`, category: 'Prévention' },
+          submittedIdea: p.ideaId || null,
+          status: p.status || 'pending',
+          createdAt: p.createdAt
+        };
+      })
+    );
+
+    return res.status(200).json({
+      count: submissions.length,
+      submissions
+    });
+  } catch (error) {
+    console.error('Erreur chargement des soumissions aux défis du participant :', error);
+    return res.status(500).json({ message: 'Erreur lors du chargement de vos soumissions aux défis.' });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -403,5 +446,6 @@ module.exports = {
   getUserIdeas,
   getUserComments,
   getUserChallenges,
-  getUserInteractions
+  getUserInteractions,
+  getParticipantChallengeSubmissions
 };

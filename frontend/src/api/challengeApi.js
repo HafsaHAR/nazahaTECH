@@ -31,3 +31,19 @@ export const createChallengeApi = async (payload) => {
   const response = await API.post('/challenges', payload);
   return response.data;
 };
+
+/**
+ * Fetch all participant submissions for a specific challenge (Admin only)
+ */
+export const getChallengeSubmissionsApi = async (challengeId) => {
+  const response = await API.get(`/challenges/${challengeId}/submissions`);
+  return response.data;
+};
+
+/**
+ * Fetch logged-in participant's challenge submission history
+ */
+export const getUserChallengeSubmissionsApi = async () => {
+  const response = await API.get('/users/me/challenge-submissions');
+  return response.data;
+};

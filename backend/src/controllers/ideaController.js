@@ -1,16 +1,51 @@
 const mongoose = require('mongoose');
+const path = require('path');
 const Idea = require('../models/Idea');
 const IdeaHistory = require('../models/IdeaHistory');
+const Participation = require('../models/Participation');
+const Challenge = require('../models/Challenge');
 const { triggerAdminNotification } = require('./notificationController');
 
 /**
- * @desc    Créer une nouvelle idée (soumission citoyenne avec statut 'pending' + notification admin)
+ * @desc    Téléverser un fichier joint (Image / Document) pour une idée
+ * @route   POST /api/ideas/upload
+ * @access  Private (JWT requis)
+ */
+const uploadIdeaAttachment = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier n\'a été transmis.' });
+    }
+
+    const rawExt = path.extname(req.file.originalname).replace('.', '').toUpperCase();
+    const bytes = req.file.size;
+    const fileSize = bytes > 1024 * 1024
+      ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(bytes / 1024)} KB`;
+
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/attachments/${req.file.filename}`;
+
+    return res.status(200).json({
+      message: 'Pièce jointe téléversée avec succès.',
+      fileName: req.file.originalname,
+      fileUrl,
+      extension: rawExt,
+      fileSize
+    });
+  } catch (error) {
+    console.error('Erreur téléversement pièce jointe :', error);
+    return res.status(500).json({ message: 'Erreur lors du téléversement de la pièce jointe.' });
+  }
+};
+
+/**
+ * @desc    Créer une nouvelle idée (avec gestion des pièces jointes et des défis)
  * @route   POST /api/ideas
  * @access  Private (JWT requis)
  */
 const createIdea = async (req, res) => {
   try {
-    const { title, category, description, challengeId } = req.body;
+    const { title, category, description, challengeId, attachments } = req.body;
 
     if (!title || !category || !description) {
       return res.status(400).json({
@@ -31,18 +66,34 @@ const createIdea = async (req, res) => {
     }
 
     const initialStatus = req.user.role === 'admin' ? 'approved' : 'pending';
+    const cleanChallengeId = (challengeId && challengeId !== 'null' && challengeId !== 'undefined') ? challengeId : null;
 
     const idea = await Idea.create({
       title: title.trim(),
       category: category,
       description: description.trim(),
-      challengeId: challengeId || null,
+      challengeId: cleanChallengeId,
       author: req.user._id,
       createdBy: req.user._id,
       status: initialStatus,
       voters: [req.user._id],
-      voteCount: 1
+      voteCount: 1,
+      attachments: Array.isArray(attachments) ? attachments : []
     });
+
+    // Si l'idée est soumise dans le cadre d'un défi spécifique, créer l'enregistrement de Participation
+    if (cleanChallengeId) {
+      await Participation.create({
+        userId: req.user._id,
+        challengeId: cleanChallengeId,
+        ideaId: idea._id,
+        status: 'pending'
+      });
+
+      if (mongoose.Types.ObjectId.isValid(cleanChallengeId)) {
+        await Challenge.findByIdAndUpdate(cleanChallengeId, { $inc: { participantsCount: 1 } });
+      }
+    }
 
     const userName = req.user.name || `${req.user.firstName} ${req.user.lastName}`;
     await triggerAdminNotification(
@@ -54,7 +105,9 @@ const createIdea = async (req, res) => {
     const populatedIdea = await Idea.findById(idea._id).populate('author', 'firstName lastName email role');
 
     return res.status(201).json({
-      message: 'Idée soumise avec succès. Elle est en cours de modération par l\'équipe INPPLC.',
+      message: cleanChallengeId
+        ? 'Participation au défi soumise avec succès. Elle est en cours d\'examen.'
+        : 'Idée soumise avec succès. Elle est en cours de modération par l\'équipe INPPLC.',
       idea: populatedIdea
     });
 
@@ -68,7 +121,7 @@ const createIdea = async (req, res) => {
 };
 
 /**
- * @desc    Récupérer la liste des idées avec filtrage multicritères, recherche textuelle et tri
+ * @desc    Récupérer la liste des idées (ISOLATION STRICTE des soumissions de défis)
  * @route   GET /api/ideas
  * @access  Public
  */
@@ -82,6 +135,8 @@ const getIdeas = async (req, res) => {
     } else {
       filter.status = { $ne: 'rejected' };
     }
+
+    filter.challengeId = { $in: [null, '', 'null', 'undefined'] };
 
     if (category && category !== 'Toutes' && category !== 'All') {
       filter.category = category;
@@ -121,7 +176,7 @@ const getIdeas = async (req, res) => {
 };
 
 /**
- * @desc    Récupérer une seule idée par son ID (Vue détaillée /ideas/:id)
+ * @desc    Récupérer une seule idée par son ID
  * @route   GET /api/ideas/:id
  * @access  Public
  */
@@ -158,7 +213,7 @@ const getIdeaById = async (req, res) => {
 };
 
 /**
- * @desc    Approuver une idée (Statut -> 'approved')
+ * @desc    Approuver une idée
  * @route   PATCH /api/ideas/:id/approve
  * @access  Private (Admin)
  */
@@ -184,7 +239,7 @@ const approveIdea = async (req, res) => {
 };
 
 /**
- * @desc    Rejeter une idée : Archivage dans IdeaHistory + Suppression définitive de la collection 'ideas'
+ * @desc    Rejeter une idée
  * @route   PATCH /api/ideas/:id/reject
  * @access  Private (Admin)
  */
@@ -217,7 +272,7 @@ const rejectIdea = async (req, res) => {
 };
 
 /**
- * @desc    Voter pour une idée (Toggle vote robuste avec vérification null-safe)
+ * @desc    Voter pour une idée
  * @route   POST /api/ideas/:id/vote
  * @access  Private (JWT requis)
  */
@@ -270,6 +325,7 @@ const voteIdea = async (req, res) => {
 };
 
 module.exports = {
+  uploadIdeaAttachment,
   createIdea,
   getIdeas,
   getIdeaById,

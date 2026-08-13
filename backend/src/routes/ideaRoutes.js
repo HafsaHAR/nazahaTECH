@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const upload = require('../middlewares/uploadMiddleware');
 const {
+  uploadIdeaAttachment,
   createIdea,
   getIdeas,
   getIdeaById,
@@ -15,6 +17,9 @@ router.get('/', getIdeas);
 
 // Route publique : Récupérer une idée par son ID
 router.get('/:id', getIdeaById);
+
+// Route protégée : Téléverser une pièce jointe (Image / Document) pour une idée
+router.post('/upload', protect, upload.single('file'), uploadIdeaAttachment);
 
 // Route protégée : Soumettre une nouvelle idée
 router.post('/', protect, createIdea);

@@ -12,8 +12,10 @@ import SubmitIdea from './pages/SubmitIdea';
 import Ideas from './pages/Ideas';
 import IdeaDetail from './pages/IdeaDetail';
 import Profile from './pages/Profile';
+import Library from './pages/Library';
+import Initiatives from './pages/Initiatives';
+import InitiativeDetail from './pages/InitiativeDetail';
 
-// Wrapper pour protéger les routes qui nécessitent d'être connecté (ex: /profile, /submit-idea)
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
@@ -49,16 +51,19 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Disposition Principale INPPLC (AppLayout) accessible aux Visiteurs et Membres */}
+      {/* Disposition Principale INPPLC (AppLayout) */}
       <Route element={<AppLayout />}>
-        {/* Vues Publiques (Consultation autorisée pour les invités) */}
+        {/* Vues Publiques / Consultation */}
         <Route path="/" element={<Dashboard />} />
         <Route path="/ideas" element={<Ideas />} />
         <Route path="/ideas/:id" element={<IdeaDetail />} />
         <Route path="/challenges" element={<Challenges />} />
         <Route path="/challenges/:id" element={<ChallengeDetail />} />
+        <Route path="/library" element={<Library />} />
+        <Route path="/initiatives" element={<Initiatives />} />
+        <Route path="/initiatives/:id" element={<InitiativeDetail />} />
 
-        {/* Routes Stritement Réservées aux Utilisateurs Authentifiés */}
+        {/* Routes Protégées par Authentification */}
         <Route path="/submit-idea" element={<ProtectedRoute><SubmitIdea /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       </Route>

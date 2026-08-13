@@ -17,7 +17,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
-        {/* Logo & Brand */}
+        {/* Logo & Marque Institutionnelle INPPLC */}
         <NavLink to="/" className="sidebar-brand">
           <div className="sidebar-logo-badge">
             <img src={logo} alt="INPPLC Logo" />
@@ -28,7 +28,7 @@ export default function Sidebar() {
           </div>
         </NavLink>
 
-        {/* Bouton + Nouvelle idée */}
+        {/* Bouton + Nouvelle Idée */}
         <NavLink
           to={user ? "/submit-idea" : "/login"}
           className="btn-new-idea"
@@ -36,7 +36,7 @@ export default function Sidebar() {
           <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⊕</span> {t('nav.new_idea')}
         </NavLink>
 
-        {/* Liens de navigation principaux */}
+        {/* Navigation Principale */}
         <nav className="sidebar-nav">
           <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">⊞</span> {t('nav.dashboard')}
@@ -47,6 +47,12 @@ export default function Sidebar() {
           <NavLink to="/challenges" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">🏆</span> {t('nav.challenges')}
           </NavLink>
+          <NavLink to="/library" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <span className="nav-icon">📚</span> Bibliothèque
+          </NavLink>
+          <NavLink to="/initiatives" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <span className="nav-icon">📋</span> Initiatives
+          </NavLink>
           {user && (
             <NavLink to="/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <span className="nav-icon">👤</span> {t('nav.profile')}
@@ -55,7 +61,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Bouton du Bas (Déconnexion ou Connexion) */}
+      {/* Déconnexion / Connexion */}
       <div className="sidebar-bottom">
         {user ? (
           <button onClick={handleLogout} className="btn-sidebar-logout">

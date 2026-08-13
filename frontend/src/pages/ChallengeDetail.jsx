@@ -1,20 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getChallengeByIdApi, toggleBookmarkApi } from '../api/challengeApi';
+import { getChallengeByIdApi, toggleBookmarkApi, getChallengeSubmissionsApi } from '../api/challengeApi';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import './ChallengeDetail.css';
+import './Dashboard.css';
 
 export default function ChallengeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const isAdmin = user?.role === 'admin';
 
   const [challenge, setChallenge] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+
+  // États pour les soumissions spécifiques au défi (Vue Admin)
+  const [submissions, setSubmissions] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -40,8 +46,26 @@ export default function ChallengeDetail() {
     fetchDetail();
   }, [id]);
 
+  // Charger les soumissions des participants si l'utilisateur est Admin
+  useEffect(() => {
+    if (isAdmin && id) {
+      fetchSubmissions();
+    }
+  }, [isAdmin, id]);
+
+  const fetchSubmissions = async () => {
+    try {
+      setLoadingSubmissions(true);
+      const res = await getChallengeSubmissionsApi(id);
+      setSubmissions(res.submissions || []);
+    } catch (err) {
+      console.error('Erreur chargement soumissions admin :', err);
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
   const handleToggleBookmarkOptimistic = async () => {
-    // Protection Invité (Guest Restriction) : Redirection vers /login
     if (!user) {
       navigate('/login');
       return;
@@ -62,7 +86,6 @@ export default function ChallengeDetail() {
   };
 
   const handleParticipate = () => {
-    // Protection Invité (Guest Restriction) : Redirection vers /login
     if (!user) {
       navigate('/login');
       return;
@@ -201,6 +224,60 @@ export default function ChallengeDetail() {
         </div>
       </div>
 
+      {/* Section Réservée à l'Admin : Consultation des Soumissions des Participants pour ce Défi */}
+      {isAdmin && (
+        <div style={{ marginTop: '2rem', backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '18px', padding: '1.75rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#111827', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            🎯 Soumissions des Participants ({submissions.length}) — Espace Admin
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1.25rem' }}>
+            Consultez toutes les idées soumises par les candidats pour ce défi spécifique. Ces idées sont isolées de la galerie d'idées publiques.
+          </p>
+
+          {loadingSubmissions ? (
+            <div style={{ padding: '1.5rem', textAlign: 'center', color: '#6b7280' }}>Chargement des soumissions au défi...</div>
+          ) : submissions.length === 0 ? (
+            <div style={{ padding: '1.5rem', backgroundColor: '#f9fafb', borderRadius: '12px', textAlign: 'center', color: '#6b7280', fontSize: '0.9rem' }}>
+              Aucun participant n'a encore soumis d'idée pour ce défi.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {submissions.map((sub, index) => (
+                <div
+                  key={sub._id}
+                  className="moderation-card"
+                  style={{ borderLeft: '4px solid var(--primary-green)', padding: '1.25rem' }}
+                >
+                  <div className="moderation-body">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span className="moderation-badge approved" style={{ backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                        Soumission #{index + 1}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                        Date : {new Date(sub.createdAt).toLocaleDateString('fr-FR')}
+                      </span>
+                    </div>
+
+                    <h3 className="moderation-title" style={{ fontSize: '1.1rem', marginBottom: '0.35rem' }}>
+                      {sub.submittedIdea?.title || 'Idée transmise au défi'}
+                    </h3>
+                    <p className="moderation-desc" style={{ fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+                      {sub.submittedIdea?.description || 'Description de la soumission'}
+                    </p>
+
+                    <div className="moderation-meta">
+                      <span>Candidat : <strong>{sub.participant?.name}</strong> ({sub.participant?.email})</span>
+                      <span>Statut : <strong style={{ color: sub.status === 'approved' ? '#15803d' : '#b45309' }}>{sub.status === 'approved' ? '🟢 Approuvé' : '⏳ En cours d\'examen'}</strong></span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sections supplémentaires du défi */}
       {sortedExtraFields.length > 0 && (
         <div className="dynamic-extra-sections">
           <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#111827', marginBottom: '0.5rem' }}>

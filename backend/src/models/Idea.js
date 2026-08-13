@@ -1,5 +1,15 @@
 const mongoose = require('mongoose');
 
+const attachmentSchema = new mongoose.Schema(
+  {
+    fileName: { type: String, required: true },
+    fileUrl: { type: String, required: true },
+    fileSize: { type: String, default: '' },
+    extension: { type: String, default: '' }
+  },
+  { _id: false }
+);
+
 const ideaSchema = new mongoose.Schema(
   {
     title: {
@@ -57,14 +67,15 @@ const ideaSchema = new mongoose.Schema(
     voteCount: {
       type: Number,
       default: 0
-    }
+    },
+    attachments: [attachmentSchema]
   },
   {
     timestamps: true
   }
 );
 
-// Indexation de recherche textuelle pour des requêtes performantes et scalables sur MongoDB
+// Indexation de recherche textuelle pour des requêtes performantes sur MongoDB
 ideaSchema.index({ title: 'text', description: 'text' });
 
 // Normaliser automatiquement le statut 'soumis' vers 'pending' et autocompléter createdBy

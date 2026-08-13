@@ -6,7 +6,8 @@ const {
   createChallenge,
   toggleBookmark,
   getChallenges,
-  getChallengeById
+  getChallengeById,
+  getChallengeSubmissions
 } = require('../controllers/challengeController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
@@ -34,7 +35,8 @@ router.get('/:id', optionalAuth, getChallengeById);
 // Protected User routes (Bookmark favorite)
 router.post('/:id/bookmark', protect, toggleBookmark);
 
-// Protected Admin-ONLY route: Create new challenge
+// Protected Admin-ONLY routes: Create new challenge & View submissions
 router.post('/', protect, authorize('admin'), createChallenge);
+router.get('/:id/submissions', protect, authorize('admin'), getChallengeSubmissions);
 
 module.exports = router;

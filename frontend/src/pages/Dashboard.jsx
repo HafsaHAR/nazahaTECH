@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getIdeasApi, voteIdeaApi } from '../api/ideaApi';
+import AuthPromptModal from '../components/AuthPromptModal';
 import {
   getAdminMetricsApi,
   getAdminNotificationsApi,
@@ -23,9 +24,11 @@ export default function Dashboard() {
   // États généraux
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [modalActionName, setModalActionName] = useState('');
 
   // États spécifiques Admin
-  const [adminTab, setAdminTab] = useState('pending_ideas'); // 'pending_ideas' | 'all_ideas' | 'history' | 'notifications'
+  const [adminTab, setAdminTab] = useState('pending_ideas');
   const [metrics, setMetrics] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [rejectedHistory, setRejectedHistory] = useState([]);
@@ -62,11 +65,16 @@ export default function Dashboard() {
     loadData();
   }, [isAdmin]);
 
+  const triggerAuthPrompt = (actionLabel) => {
+    setModalActionName(actionLabel);
+    setAuthModalOpen(true);
+  };
+
   const handleVoteOptimistic = async (e, ideaId) => {
     e.stopPropagation();
 
     if (!user) {
-      navigate('/login');
+      triggerAuthPrompt('voter pour une idée citoyenne');
       return;
     }
 
@@ -150,6 +158,13 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
+      {/* Fenêtre Modale d'Invite à la Connexion pour le Visiteur */}
+      <AuthPromptModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        actionName={modalActionName}
+      />
+
       {/* Hero Banner Conforme aux Maquettes */}
       <div className="dashboard-hero">
         <div className="hero-badge">
@@ -164,16 +179,22 @@ export default function Dashboard() {
             : t('dashboard.hero_sub')}
         </p>
         <div className="hero-buttons">
-          <Link to={user ? "/submit-idea" : "/login"} className="btn-hero-primary">
-            {t('action.submit_idea')}
-          </Link>
+          {user ? (
+            <Link to="/submit-idea" className="btn-hero-primary">
+              {t('action.submit_idea')}
+            </Link>
+          ) : (
+            <button type="button" onClick={() => triggerAuthPrompt('soumettre une idée d\'innovation')} className="btn-hero-primary">
+              {t('action.submit_idea')}
+            </button>
+          )}
           <Link to="/challenges" className="btn-hero-secondary">
             {t('action.participate')}
           </Link>
         </div>
       </div>
 
-      {/* Cartes Métriques (Design Dashboard) */}
+      {/* Cartes Métriques Publiques */}
       <div className="metrics-grid">
         {isAdmin ? (
           <>
@@ -230,37 +251,26 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Module de Modération Admin sur le Tableau de bord */}
+
+
+      {/* Module Admin (si connecté) */}
       {isAdmin && (
         <div className="admin-moderation-section">
           <div className="moderation-tabs">
-            <button
-              className={`tab-btn ${adminTab === 'pending_ideas' ? 'active' : ''}`}
-              onClick={() => setAdminTab('pending_ideas')}
-            >
+            <button className={`tab-btn ${adminTab === 'pending_ideas' ? 'active' : ''}`} onClick={() => setAdminTab('pending_ideas')}>
               ⏳ Idées à modérer ({pendingIdeas.length})
             </button>
-            <button
-              className={`tab-btn ${adminTab === 'all_ideas' ? 'active' : ''}`}
-              onClick={() => setAdminTab('all_ideas')}
-            >
+            <button className={`tab-btn ${adminTab === 'all_ideas' ? 'active' : ''}`} onClick={() => setAdminTab('all_ideas')}>
               💡 Idées publiées ({ideas.length})
             </button>
-            <button
-              className={`tab-btn ${adminTab === 'history' ? 'active' : ''}`}
-              onClick={() => setAdminTab('history')}
-            >
+            <button className={`tab-btn ${adminTab === 'history' ? 'active' : ''}`} onClick={() => setAdminTab('history')}>
               📋 Historique des rejets ({rejectedHistory.length})
             </button>
-            <button
-              className={`tab-btn ${adminTab === 'notifications' ? 'active' : ''}`}
-              onClick={() => setAdminTab('notifications')}
-            >
+            <button className={`tab-btn ${adminTab === 'notifications' ? 'active' : ''}`} onClick={() => setAdminTab('notifications')}>
               🔔 Notifications {unreadCount > 0 && <span style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', marginLeft: '0.35rem' }}>{unreadCount}</span>}
             </button>
           </div>
 
-          {/* Onglet 1: Idées en attente de modération */}
           {adminTab === 'pending_ideas' && (
             <div>
               {pendingIdeas.length === 0 ? (
@@ -298,7 +308,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Onglet 2: Vue globale des idées publiées */}
           {adminTab === 'all_ideas' && (
             <div>
               {ideas.map((idea) => (
@@ -314,78 +323,35 @@ export default function Dashboard() {
                       <span>Votes: {idea.voteCount || 0}</span>
                     </div>
                   </div>
-
-                  {idea.status === 'pending' && (
-                    <div className="moderation-actions">
-                      <button onClick={() => handleApproveIdea(idea._id)} className="btn-approve">
-                        ✓ Approuver
-                      </button>
-                      <button onClick={() => handleRejectIdea(idea._id)} className="btn-reject">
-                        ✕ Rejeter & Supprimer
-                      </button>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
           )}
 
-          {/* Onglet 3: Historique des rejets */}
           {adminTab === 'history' && (
             <div>
-              {rejectedHistory.length === 0 ? (
-                <p style={{ color: '#6b7280', padding: '1rem 0' }}>Aucune idée enregistrée dans l'historique des rejets.</p>
-              ) : (
-                rejectedHistory.map((item) => (
-                  <div key={item._id} className="moderation-card" style={{ borderLeft: '4px solid #ef4444' }}>
-                    <div className="moderation-body">
-                      <span className="moderation-badge rejected">Supprimée & Archivée</span>
-                      <h3 className="moderation-title">{item.title}</h3>
-                      <p className="moderation-desc">{item.description}</p>
-                      <div className="moderation-meta">
-                        <span>Auteur originel: <strong>{getAuthorName(item.author)}</strong></span>
-                        <span>Rejeté le: {new Date(item.rejectedAt).toLocaleDateString('fr-FR')}</span>
-                      </div>
-                    </div>
+              {rejectedHistory.map((item) => (
+                <div key={item._id} className="moderation-card" style={{ borderLeft: '4px solid #ef4444' }}>
+                  <div className="moderation-body">
+                    <span className="moderation-badge rejected">Supprimée & Archivée</span>
+                    <h3 className="moderation-title">{item.title}</h3>
+                    <p className="moderation-desc">{item.description}</p>
                   </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Onglet 4: Notifications Admin */}
           {adminTab === 'notifications' && (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Notifications Admin ({unreadCount} non lues)</h3>
-                {unreadCount > 0 && (
-                  <button onClick={handleMarkAllRead} className="btn-cancel" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
-                    Tout marquer comme lu
-                  </button>
-                )}
-              </div>
-
-              {notifications.length === 0 ? (
-                <p style={{ color: '#6b7280', padding: '1rem 0' }}>Aucune notification pour le moment.</p>
-              ) : (
-                notifications.map((notif) => (
-                  <div key={notif._id} className={`notification-item ${!notif.isRead ? 'unread' : ''}`}>
-                    <div>
-                      {!notif.isRead && <span className="unread-dot" />}
-                      <span>{notif.message}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginLeft: '0.75rem' }}>
-                        {new Date(notif.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-
-                    {!notif.isRead && (
-                      <button onClick={() => handleMarkRead(notif._id)} className="btn-cancel" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}>
-                        Marquer lu
-                      </button>
-                    )}
+              {notifications.map((notif) => (
+                <div key={notif._id} className={`notification-item ${!notif.isRead ? 'unread' : ''}`}>
+                  <div>
+                    {!notif.isRead && <span className="unread-dot" />}
+                    <span>{notif.message}</span>
                   </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -409,7 +375,7 @@ export default function Dashboard() {
           <div style={{ padding: '2rem', color: '#6b7280' }}>Chargement des idées...</div>
         ) : ideas.length === 0 ? (
           <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '2rem', color: '#6b7280' }}>
-            Aucune idée enregistrée pour le moment. Cliquez sur "Soumettre une idée" ci-dessus !
+            Aucune idée enregistrée pour le moment.
           </div>
         ) : (
           <div className="ideas-grid">

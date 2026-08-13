@@ -20,10 +20,10 @@ export default function IdeaDetail() {
   const [voteCount, setVoteCount] = useState(0);
   const [voted, setVoted] = useState(false);
 
-  // États du système avancé de commentaires imbriqués
+  // États des commentaires
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
-  const [commentSort, setCommentSort] = useState('recent'); // 'recent' | 'popular'
+  const [commentSort, setCommentSort] = useState('recent');
   const [newCommentText, setNewCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
@@ -82,7 +82,6 @@ export default function IdeaDetail() {
     }
   }, [id, commentSort]);
 
-  // Vote optimiste sur l'idée avec rollback automatique
   const handleVoteOptimistic = async () => {
     if (!idea) return;
 
@@ -109,7 +108,6 @@ export default function IdeaDetail() {
     }
   };
 
-  // Soumission optimiste d'un commentaire racine
   const handlePostRootComment = async (e) => {
     e.preventDefault();
     if (!newCommentText.trim()) return;
@@ -193,12 +191,10 @@ export default function IdeaDetail() {
 
   return (
     <div className="idea-detail-container">
-      {/* Bouton de retour */}
       <button onClick={() => navigate('/ideas')} className="btn-back">
         ← Retour à la galerie des idées
       </button>
 
-      {/* Carte de l'Idée */}
       <div className="idea-detail-card">
         <div className="idea-detail-header-tags">
           <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
@@ -218,8 +214,51 @@ export default function IdeaDetail() {
           {idea?.description}
         </div>
 
-        {/* Profil Auteur & Bouton Vote */}
-        <div className="author-box">
+        {/* Section Affichage des Pièces Jointes & Fichiers de l'Idée */}
+        {idea?.attachments && idea.attachments.length > 0 && (
+          <div style={{ marginTop: '1.75rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.25rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>📎</span> Pièces Jointes & Documents Joins ({idea.attachments.length})
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+              {idea.attachments.map((att, idx) => {
+                const isImage = ['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP', 'SVG'].includes(att.extension?.toUpperCase());
+                return (
+                  <div key={idx} style={{ border: '1px solid #d1d5db', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+                    {isImage ? (
+                      <a href={att.fileUrl} target="_blank" rel="noopener noreferrer">
+                        <img src={att.fileUrl} alt={att.fileName} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                      </a>
+                    ) : (
+                      <div style={{ height: '80px', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
+                        📄
+                      </div>
+                    )}
+                    <div style={{ padding: '0.65rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#111827', wordBreak: 'break-word' }}>{att.fileName}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{att.extension} • {att.fileSize}</div>
+                      </div>
+                      <a
+                        href={att.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="btn-cancel"
+                        style={{ marginTop: '0.5rem', fontSize: '0.75rem', padding: '0.35rem 0.6rem', textAlign: 'center', display: 'block' }}
+                      >
+                        📥 Consulter / Télécharger
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="author-box" style={{ marginTop: '1.75rem' }}>
           <div className="author-info">
             <div className="author-avatar-large">
               {getInitials(idea?.author)}
@@ -248,14 +287,13 @@ export default function IdeaDetail() {
         </div>
       </div>
 
-      {/* Section Avancée de Commentaires Imbriqués */}
+      {/* Section Commentaires */}
       <div className="comments-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h2 className="comments-title" style={{ margin: 0 }}>
             <span>💬</span> Échanges & Commentaires ({comments.length})
           </h2>
 
-          {/* Tri des commentaires (Recent vs Popular) */}
           <select
             value={commentSort}
             onChange={(e) => setCommentSort(e.target.value)}
@@ -273,7 +311,6 @@ export default function IdeaDetail() {
           </select>
         </div>
 
-        {/* Formulaire de publication de commentaire racine */}
         <form onSubmit={handlePostRootComment} className="comment-input-box">
           <input
             type="text"
@@ -287,7 +324,6 @@ export default function IdeaDetail() {
           </button>
         </form>
 
-        {/* Arborescence des commentaires imbriqués (CommentTree) */}
         {commentsLoading ? (
           <p style={{ color: '#6b7280', padding: '1rem 0' }}>Chargement des commentaires...</p>
         ) : comments.length === 0 ? (

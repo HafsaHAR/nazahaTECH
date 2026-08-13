@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getIdeasApi, voteIdeaApi } from '../api/ideaApi';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import AuthPromptModal from '../components/AuthPromptModal';
 import './Ideas.css';
 import './Challenges.css';
 import './Dashboard.css';
@@ -12,7 +13,7 @@ export default function Ideas() {
   const { user } = useAuth();
   const { t } = useLanguage();
 
-  const [status, setStatus] = useState('all'); // 'all' | 'approved' | 'pending'
+  const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Toutes');
   const [sort, setSort] = useState('recent');
@@ -20,6 +21,8 @@ export default function Ideas() {
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [modalActionName, setModalActionName] = useState('');
 
   const categoriesList = ['Toutes', 'Prévention', 'Transparence', 'Digital', 'Éducation'];
 
@@ -52,12 +55,16 @@ export default function Ideas() {
     }
   };
 
+  const triggerAuthPrompt = (actionLabel) => {
+    setModalActionName(actionLabel);
+    setAuthModalOpen(true);
+  };
+
   const handleVoteOptimistic = async (e, ideaId) => {
     e.stopPropagation();
 
-    // Protection Invité (Guest Restriction)
     if (!user) {
-      navigate('/login');
+      triggerAuthPrompt('voter pour cette idée citoyenne');
       return;
     }
 
@@ -98,6 +105,13 @@ export default function Ideas() {
 
   return (
     <div className="ideas-container">
+      {/* Fenêtre Modale d'Invite à la Connexion pour le Visiteur */}
+      <AuthPromptModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        actionName={modalActionName}
+      />
+
       {/* En-tête de la Galerie */}
       <div className="section-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -108,12 +122,23 @@ export default function Ideas() {
             {t('ideas.sub')}
           </p>
         </div>
-        <Link to={user ? "/submit-idea" : "/login"} className="btn-hero-primary" style={{ textDecoration: 'none' }}>
-          + {t('nav.new_idea')}
-        </Link>
+        {user ? (
+          <Link to="/submit-idea" className="btn-hero-primary" style={{ textDecoration: 'none' }}>
+            + {t('nav.new_idea')}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => triggerAuthPrompt('soumettre une nouvelle idée')}
+            className="btn-hero-primary"
+            style={{ textDecoration: 'none' }}
+          >
+            + {t('nav.new_idea')}
+          </button>
+        )}
       </div>
 
-      {/* Barre de Filtrage Identique à celle des Défis (Challenges Filter Panel Style) */}
+      {/* Barre de Filtrage Identique à celle des Défis */}
       <div className="challenges-filter-panel">
         <div className="status-tabs-row">
           <button
@@ -174,7 +199,7 @@ export default function Ideas() {
 
       {error && <div className="alert-error" style={{ marginBottom: '1.5rem' }}>{error}</div>}
 
-      {/* Affichage de la Grille des Idées */}
+      {/* Grille des Idées */}
       {loading ? (
         <div className="ideas-grid">
           <div className="skeleton-card" />

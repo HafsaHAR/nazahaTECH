@@ -9,6 +9,7 @@ import {
   getUserChallengesApi,
   getUserInteractionsApi
 } from '../api/authApi';
+import { getUserChallengeSubmissionsApi } from '../api/challengeApi';
 import './Profile.css';
 
 export default function Profile() {
@@ -31,14 +32,15 @@ export default function Profile() {
     interactionsCount: 0
   });
 
-  // Gestion des onglets d'activité et du chargement à la demande (Lazy Loading)
-  const [activeTab, setActiveTab] = useState('ideas'); // 'ideas' | 'comments' | 'challenges' | 'interactions'
+  // Gestion des onglets d'activité
+  // 'ideas' | 'comments' | 'challenges' | 'challenge_submissions' | 'interactions'
+  const [activeTab, setActiveTab] = useState('ideas');
   const [tabData, setTabData] = useState([]);
+  const [challengeSubmissions, setChallengeSubmissions] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [tabLoading, setTabLoading] = useState(false);
 
-  // Initialisation des champs d'édition lors du chargement de l'utilisateur
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || '');
@@ -47,7 +49,6 @@ export default function Profile() {
     }
   }, [user]);
 
-  // Chargement initial du résumé d'activité léger (Counts)
   useEffect(() => {
     const fetchSummary = async () => {
       try {
@@ -62,7 +63,6 @@ export default function Profile() {
     fetchSummary();
   }, []);
 
-  // Chargement à la demande (Lazy Loading) des données de l'onglet actif et de la page
   useEffect(() => {
     fetchTabData(activeTab, page);
   }, [activeTab, page]);
@@ -82,6 +82,10 @@ export default function Profile() {
         const res = await getUserChallengesApi({ page: currentPage, limit: 5 });
         setTabData(res.challenges || []);
         setTotalPages(res.pages || 1);
+      } else if (tab === 'challenge_submissions') {
+        const res = await getUserChallengeSubmissionsApi();
+        setChallengeSubmissions(res.submissions || []);
+        setTotalPages(1);
       } else if (tab === 'interactions') {
         const res = await getUserInteractionsApi({ page: currentPage, limit: 5 });
         setTabData(res.interactions || []);
@@ -90,12 +94,12 @@ export default function Profile() {
     } catch (err) {
       console.error('Erreur chargement onglet :', err);
       setTabData([]);
+      setChallengeSubmissions([]);
     } finally {
       setTabLoading(false);
     }
   };
 
-  // Traitement de la mise à jour des informations personnelles
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setUpdatingProfile(true);
@@ -109,7 +113,6 @@ export default function Profile() {
         phoneNumber: phoneNumber.trim()
       });
       setUpdateMsg('Profil mis à jour avec succès !');
-      // Mettre à jour l'affichage localement sans rechargement
       if (user) {
         user.firstName = firstName.trim();
         user.lastName = lastName.trim();
@@ -124,7 +127,6 @@ export default function Profile() {
     }
   };
 
-  // Fallback intelligent pour afficher un nom propre sans "undefined undefined"
   const getDisplayName = () => {
     if (user?.firstName && user?.lastName && user.firstName !== 'undefined') {
       return `${user.firstName} ${user.lastName}`;
@@ -155,7 +157,7 @@ export default function Profile() {
 
   return (
     <div className="profile-container">
-      {/* 1. Carte d'En-tête de Profil avec Avatar & Statistiques Résumées */}
+      {/* Carte d'En-tête */}
       <div className="profile-header-card">
         <div className="profile-main-info">
           <div className="profile-avatar-box">
@@ -179,7 +181,6 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Grille des statistiques d'activité rapides */}
         <div className="profile-stats-grid">
           <div className="profile-stat-box">
             <div className="profile-stat-val">{summary.ideasCount}</div>
@@ -203,7 +204,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* 2. Section des Informations Personnelles Éditables */}
+      {/* Informations Personnelles */}
       <div className="profile-section-card">
         <h2 className="section-card-title">
           <span>📝</span> Mes Informations Personnelles
@@ -260,19 +261,25 @@ export default function Profile() {
         </form>
       </div>
 
-      {/* 3. Historique d'Activité Structuré avec Chargement à la Demande (Lazy Loading) */}
+      {/* Historique d'Activité */}
       <div className="profile-section-card">
         <h2 className="section-card-title">
           <span>📊</span> Historique de mes Contributions & Activités
         </h2>
 
-        {/* Onglets de sous-navigation d'activité */}
+        {/* Onglets d'activité */}
         <div className="activity-tabs-header">
           <button
             className={`activity-tab-btn ${activeTab === 'ideas' ? 'active' : ''}`}
             onClick={() => { setActiveTab('ideas'); setPage(1); }}
           >
-            💡 Mes Idées ({summary.ideasCount})
+            💡 Mes Idées Générales ({summary.ideasCount})
+          </button>
+          <button
+            className={`activity-tab-btn ${activeTab === 'challenge_submissions' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('challenge_submissions'); setPage(1); }}
+          >
+            🎯 Mes Soumissions aux Défis
           </button>
           <button
             className={`activity-tab-btn ${activeTab === 'comments' ? 'active' : ''}`}
@@ -284,42 +291,35 @@ export default function Profile() {
             className={`activity-tab-btn ${activeTab === 'challenges' ? 'active' : ''}`}
             onClick={() => { setActiveTab('challenges'); setPage(1); }}
           >
-            🏆 Défis & Favoris ({summary.challengesCount})
-          </button>
-          <button
-            className={`activity-tab-btn ${activeTab === 'interactions' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('interactions'); setPage(1); }}
-          >
-            👍 Interactions ({summary.interactionsCount})
+            🏆 Défis Favoris ({summary.challengesCount})
           </button>
         </div>
 
-        {/* Contenu dynamique paginé de l'onglet actif */}
         {tabLoading ? (
           <div style={{ padding: '2.5rem', textAlign: 'center', color: '#6b7280' }}>
             Chargement de vos activités...
           </div>
-        ) : tabData.length === 0 ? (
+        ) : (activeTab === 'challenge_submissions' ? challengeSubmissions.length === 0 : tabData.length === 0) ? (
           <div className="empty-state-box">
             <div className="empty-state-icon">
-              {activeTab === 'ideas' ? '💡' : activeTab === 'comments' ? '💬' : activeTab === 'challenges' ? '🏆' : '👍'}
+              {activeTab === 'ideas' ? '💡' : activeTab === 'challenge_submissions' ? '🎯' : activeTab === 'comments' ? '💬' : '🏆'}
             </div>
             <h3 style={{ fontSize: '1.1rem', color: '#111827', marginBottom: '0.35rem' }}>
               Aucune activité enregistrée ici
             </h3>
             <p style={{ fontSize: '0.875rem' }}>
               {activeTab === 'ideas'
-                ? 'Vous n\'avez pas encore proposé d\'idée. Soumettez votre première contribution !'
+                ? 'Vous n\'avez pas encore proposé d\'idée générale. Soumettez votre première contribution !'
+                : activeTab === 'challenge_submissions'
+                ? 'Vous n\'avez pas encore soumis d\'idée à un défi d\'innovation.'
                 : activeTab === 'comments'
                 ? 'Vous n\'avez pas encore rédigé de commentaire.'
-                : activeTab === 'challenges'
-                ? 'Aucun défi participé ou sauvegardé pour le moment.'
-                : 'Vos votes et likes apparaîtront ici.'}
+                : 'Aucun défi sauvegardé pour le moment.'}
             </p>
           </div>
         ) : (
           <div>
-            {/* Onglet 1: Mes Idées */}
+            {/* Onglet: Mes Idées Générales */}
             {activeTab === 'ideas' && tabData.map((idea) => (
               <div
                 key={idea._id}
@@ -342,7 +342,36 @@ export default function Profile() {
               </div>
             ))}
 
-            {/* Onglet 2: Mes Commentaires */}
+            {/* Onglet Spécifique: Mes Soumissions aux Défis (Historique Personnel du Participant) */}
+            {activeTab === 'challenge_submissions' && challengeSubmissions.map((sub) => (
+              <div
+                key={sub._id}
+                className="activity-item-card"
+                style={{ borderLeft: '4px solid var(--primary-green)', padding: '1.25rem' }}
+              >
+                <div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <span className="idea-badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                      🏆 Défi : {sub.challenge?.title || 'Défi INPPLC'}
+                    </span>
+                    <span className={`status-tag ${sub.status === 'approved' ? 'approved' : 'pending'}`}>
+                      {sub.status === 'approved' ? '🟢 Approuvé' : '⏳ En cours d\'examen'}
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827', marginBottom: '0.35rem' }}>
+                    Idée soumise : {sub.submittedIdea?.title || 'Idée transmise'}
+                  </h4>
+                  <p style={{ fontSize: '0.875rem', color: '#4b5563', lineHeight: 1.5 }}>
+                    {sub.submittedIdea?.description || 'Description de la soumission'}
+                  </p>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'none' }}>
+                  Soumis le {new Date(sub.createdAt).toLocaleDateString('fr-FR')}
+                </div>
+              </div>
+            ))}
+
+            {/* Onglet: Mes Commentaires */}
             {activeTab === 'comments' && tabData.map((comment) => (
               <div key={comment._id} className="activity-item-card">
                 <div>
@@ -359,7 +388,7 @@ export default function Profile() {
               </div>
             ))}
 
-            {/* Onglet 3: Mes Défis & Favoris */}
+            {/* Onglet: Mes Défis Favoris */}
             {activeTab === 'challenges' && tabData.map((ch) => (
               <div
                 key={ch._id}
@@ -379,23 +408,8 @@ export default function Profile() {
               </div>
             ))}
 
-            {/* Onglet 4: Mes Interactions */}
-            {activeTab === 'interactions' && tabData.map((item) => (
-              <div key={item._id} className="activity-item-card">
-                <div>
-                  <span className="category-tag">{item.category}</span>
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#111827', marginTop: '0.25rem' }}>
-                    {item.title}
-                  </h4>
-                </div>
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                  {new Date(item.date).toLocaleDateString('fr-FR')}
-                </span>
-              </div>
-            ))}
-
-            {/* Contrôles de Pagination Paginée */}
-            {totalPages > 1 && (
+            {/* Pagination */}
+            {activeTab !== 'challenge_submissions' && totalPages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
                 <button
                   disabled={page <= 1}

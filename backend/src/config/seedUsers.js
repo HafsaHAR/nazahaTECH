@@ -52,12 +52,10 @@ const runSeedIfEmpty = async () => {
   }
 };
 
-// Si exécuté directement en CLI via `node src/config/seedUsers.js`
 if (require.main === module) {
   mongoose
     .connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/nazahatech')
     .then(async () => {
-      // Force le re-seeding en CLI
       await User.deleteMany({});
       await runSeedIfEmpty();
       process.exit(0);

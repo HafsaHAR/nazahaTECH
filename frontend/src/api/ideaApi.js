@@ -1,5 +1,31 @@
 import API from './authApi';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+/**
+ * Téléverser une pièce jointe (Image / Document) pour une idée
+ */
+export const uploadIdeaAttachmentApi = async (file) => {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE_URL}/ideas/upload`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    body: formData
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: `Erreur HTTP ${res.status}` }));
+    throw new Error(errorData.message || 'Erreur lors du téléversement de la pièce jointe');
+  }
+
+  return res.json();
+};
+
 /**
  * Soumettre une nouvelle idée à l'API backend (sauvegarde BDD)
  */
