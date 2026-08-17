@@ -37,12 +37,6 @@ export default function Topbar() {
 
   return (
     <header className="topbar">
-      {/* Barre de recherche */}
-      <div className="topbar-search">
-        <span className="topbar-search-icon">🔍</span>
-        <input type="text" placeholder={t('topbar.search_placeholder')} />
-      </div>
-
       {/* Barre d'outils droite : Sélecteur de Langue Popover, Thème, Cloche & Utilisateur */}
       <div className="topbar-right">
         <div className="topbar-controls-group">

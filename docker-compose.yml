@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:latest
@@ -45,6 +43,17 @@ services:
       - mongodb
     networks:
       - nazahatech-network
+
+  frontend:
+    build: ./frontend
+    container_name: nazahatech-frontend
+    restart: always
+    ports:
+      - "3000:80"
+    networks:
+      - nazahatech-network
+    depends_on:
+      - backend
 
 volumes:
   mongodb_data:
