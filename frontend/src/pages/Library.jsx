@@ -7,7 +7,7 @@ import './Challenges.css';
 
 export default function Library() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { lang, t, translateText } = useLanguage();
   const isAdmin = user?.role === 'admin';
 
   const [documents, setDocuments] = useState([]);
@@ -18,15 +18,14 @@ export default function Library() {
   // État formulaire d'ajout Admin
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [fileMeta, setFileMeta] = useState(null); // { fileName, fileSize, extension }
+  const [fileMeta, setFileMeta] = useState(null);
 
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newType, setNewType] = useState('Guides');
   const [newSource, setNewSource] = useState('INPPLC Maroc');
 
-  // État d'avancement du téléversement (Multi-stage state)
-  // 'IDLE' | 'UPLOADING_FILE' | 'SAVING_DOCUMENT' | 'SUCCESS' | 'ERROR'
+  // État d'avancement du téléversement
   const [uploadState, setUploadState] = useState('IDLE');
   const [msg, setMsg] = useState('');
 
@@ -43,61 +42,65 @@ export default function Library() {
     try {
       setLoading(true);
       const data = await getDocumentsApi({ search, type });
-      setDocuments(data.documents || []);
+      if (data && Array.isArray(data.documents)) {
+        setDocuments(data.documents);
+      } else {
+        setDocuments([]);
+      }
     } catch (err) {
-      console.error('Erreur chargement bibliothèque :', err);
+      console.error('Erreur chargement documents :', err);
+      setDocuments([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Sélection locale du fichier par l'Admin
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    setSelectedFile(file);
+
+    const rawExt = file.name.split('.').pop().toUpperCase();
+    const extension = rawExt === 'DOCX' || rawExt === 'DOC' ? 'DOCX' : rawExt === 'XLSX' || rawExt === 'XLS' ? 'XLSX' : 'PDF';
     const bytes = file.size;
-    const formattedSize = bytes > 1024 * 1024
+    const fileSize = bytes > 1024 * 1024
       ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
       : `${Math.round(bytes / 1024)} KB`;
 
-    const nameParts = file.name.split('.');
-    const ext = nameParts.pop().toUpperCase();
-    const normalizedExt = ext === 'DOCX' || ext === 'DOC' ? 'DOCX' : ext === 'XLSX' || ext === 'XLS' ? 'XLSX' : 'PDF';
-
-    setSelectedFile(file);
     setFileMeta({
       fileName: file.name,
-      fileSize: formattedSize,
-      extension: normalizedExt
+      fileSize,
+      extension
     });
 
-    // Pré-remplir automatiquement le titre si vide
-    if (!newTitle.trim()) {
-      const cleanTitle = nameParts.join('.').replace(/[-_]/g, ' ');
-      setNewTitle(cleanTitle);
+    if (!newTitle) {
+      const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      setNewTitle(nameWithoutExt);
     }
   };
 
-  // Soumission et téléversement multi-étapes
   const handlePublishDocument = async (e) => {
     e.preventDefault();
+
     if (!selectedFile) {
-      alert('Veuillez sélectionner un fichier sur votre ordinateur.');
+      setMsg('❌ Veuillez sélectionner un fichier sur votre ordinateur.');
       return;
     }
-    if (!newTitle.trim() || !newDesc.trim()) return;
+
+    if (!newTitle.trim() || !newDesc.trim()) {
+      setMsg('❌ Veuillez remplir le titre et la description du document.');
+      return;
+    }
+
+    setUploadState('UPLOADING_FILE');
+    setMsg('');
 
     try {
-      setMsg('');
-      setUploadState('UPLOADING_FILE');
-
-      // Étape 1 : Téléversement du fichier physique vers backend/uploads/documents/
       const uploadRes = await uploadDocumentFileApi(selectedFile);
 
       setUploadState('SAVING_DOCUMENT');
 
-      // Étape 2 : Publication du document en base avec l'URL du fichier retournée
       await createDocumentApi({
         title: newTitle.trim(),
         description: newDesc.trim(),
@@ -112,7 +115,6 @@ export default function Library() {
       setUploadState('SUCCESS');
       setMsg('✅ Fichier téléversé et document publié dans la Bibliothèque avec succès !');
 
-      // Réinitialisation
       setSelectedFile(null);
       setFileMeta(null);
       setNewTitle('');
@@ -143,10 +145,10 @@ export default function Library() {
       <div className="section-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="section-title" style={{ fontSize: '1.85rem' }}>
-            📚 Bibliothèque & Base Documentaire INPPLC
+            {t('library.title')}
           </h1>
           <p className="section-subtitle">
-            Consultez et téléchargez les textes juridiques, guides méthodologiques, normes et rapports de prévention contre la corruption.
+            {t('library.sub')}
           </p>
         </div>
 
@@ -156,7 +158,7 @@ export default function Library() {
             className="btn-hero-primary"
             style={{ padding: '0.65rem 1.25rem', fontSize: '0.9rem' }}
           >
-            {showAddForm ? '✕ Fermer' : '+ Ajouter un Document'}
+            {showAddForm ? t('action.close') : t('action.add_doc')}
           </button>
         )}
       </div>
@@ -170,7 +172,6 @@ export default function Library() {
             📤 Téléversement & Publication d'un Document (Mode Admin)
           </h3>
 
-          {/* Sélecteur de fichier local */}
           <div style={{ marginBottom: '1.25rem', padding: '1.25rem', border: '2px dashed #d1d5db', borderRadius: '12px', backgroundColor: '#f9fafb', textAlign: 'center' }}>
             <label style={{ display: 'block', fontWeight: 800, fontSize: '0.95rem', color: '#111827', marginBottom: '0.5rem', cursor: 'pointer' }}>
               📁 Sélectionnez un fichier sur votre ordinateur (PDF, DOCX, XLSX) *
@@ -184,19 +185,19 @@ export default function Library() {
             />
 
             {fileMeta && (
-              <div style={{ marginTop: '0.75rem', padding: '0.5rem 1rem', backgroundColor: '#dcfce7', color: '#15803d', borderRadius: '8px', display: 'inline-block', fontSize: '0.85rem', fontWeight: 700 }}>
-                📄 Fichier prêt : <strong>{fileMeta.fileName}</strong> ({fileMeta.fileSize} • Format {fileMeta.extension})
+              <div style={{ marginTop: '0.75rem', display: 'inline-flex', gap: '0.75rem', alignItems: 'center', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '0.4rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700 }}>
+                📄 Fichier prêt : {fileMeta.fileName} ({fileMeta.fileSize} • Format {fileMeta.extension})
               </div>
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="form-grid-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Titre du document *</label>
               <input
                 type="text"
                 required
-                placeholder="Titre officiel du document..."
+                placeholder="Ex: Loi 46-19 relative à l'INPPLC..."
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
@@ -210,11 +211,11 @@ export default function Library() {
                 onChange={(e) => setNewType(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
               >
-                <option value="Lois">Lois & Décrets</option>
+                <option value="Lois">Lois & Textes Juridiques</option>
                 <option value="Guides">Guides & Procédures</option>
                 <option value="Rapports">Rapports & Études</option>
-                <option value="Normes">Normes & Standards</option>
-                <option value="Modèles">Modèles & FAQ</option>
+                <option value="Normes">Normes & Standards (ex: ISO)</option>
+                <option value="Modèles">Modèles & Formulaires</option>
               </select>
             </div>
           </div>
@@ -243,7 +244,6 @@ export default function Library() {
             </div>
           </div>
 
-          {/* État d'avancement du Téléversement */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
               type="submit"
@@ -257,12 +257,6 @@ export default function Library() {
                 ? '⏳ 2/2 Publication...'
                 : 'Publier dans la Bibliothèque'}
             </button>
-
-            {uploadState !== 'IDLE' && uploadState !== 'SUCCESS' && uploadState !== 'ERROR' && (
-              <span style={{ fontSize: '0.85rem', color: 'var(--primary-green)', fontWeight: 700 }}>
-                Sélectionner un fichier ➔ Upload ➔ Publication
-              </span>
-            )}
           </div>
         </form>
       )}
@@ -276,7 +270,7 @@ export default function Library() {
               className={`doc-pill ${type === tOpt ? 'active' : ''}`}
               onClick={() => setType(tOpt)}
             >
-              {tOpt === 'Toutes' ? 'Tous les documents' : tOpt}
+              {translateText(tOpt === 'Toutes' ? 'Tous les documents' : tOpt)}
             </button>
           ))}
         </div>
@@ -286,7 +280,7 @@ export default function Library() {
             <span className="challenge-search-icon">🔍</span>
             <input
               type="text"
-              placeholder="Rechercher par mot-clé (ex: Loi 46-19, ISO 37001, Marchés publics)..."
+              placeholder={t('library.search_ph')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -330,15 +324,15 @@ export default function Library() {
                     {doc.accessLevel || 'PUBLIC'}
                   </span>
                 </div>
-                <h3 className="doc-title">{doc.title}</h3>
-                <p className="doc-desc">{doc.description}</p>
+                <h3 className="doc-title">{translateText(doc.title)}</h3>
+                <p className="doc-desc">{translateText(doc.description)}</p>
               </div>
 
               <div className="doc-footer">
                 <div>
-                  <div>Source : <strong>{doc.source}</strong></div>
+                  <div>{t('meta.source')} : <strong>{translateText(doc.source)}</strong></div>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                    Taille : {doc.fileSize} • Publié le {new Date(doc.publicationDate).toLocaleDateString('fr-FR')}
+                    {t('meta.size')} : {doc.fileSize} • {t('meta.published_on')} {new Date(doc.publicationDate).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
                   </div>
                 </div>
 
@@ -350,7 +344,7 @@ export default function Library() {
                     className="btn-download-doc"
                     download
                   >
-                    📥 Télécharger
+                    {t('action.download')}
                   </a>
 
                   {isAdmin && (

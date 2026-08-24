@@ -36,7 +36,7 @@ export default function Sidebar() {
           <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⊕</span> {t('nav.new_idea')}
         </NavLink>
 
-        {/* Navigation Principale */}
+        {/* Navigation Principale Dynamique & Traduite */}
         <nav className="sidebar-nav">
           <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <span className="nav-icon">⊞</span> {t('nav.dashboard')}
@@ -48,10 +48,10 @@ export default function Sidebar() {
             <span className="nav-icon">🏆</span> {t('nav.challenges')}
           </NavLink>
           <NavLink to="/library" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span className="nav-icon">📚</span> Bibliothèque
+            <span className="nav-icon">📚</span> {t('nav.library')}
           </NavLink>
           <NavLink to="/initiatives" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span className="nav-icon">📋</span> Initiatives
+            <span className="nav-icon">📋</span> {t('nav.initiatives')}
           </NavLink>
           {user && (
             <NavLink to="/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>

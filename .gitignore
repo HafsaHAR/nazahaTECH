@@ -1,3 +1,21 @@
+# Dependances & Build
+node_modules/
+dist/
+build/
+
+# Environnement & Fichiers Sensibles
+.env.local
+*.log
+
+# Fichiers temporaires de BDD & uploads volumineux
 backend/data/
 backend/mongodb_data/
-backend/uploads/attachments/
+backend/uploads/documents/*
+!backend/uploads/documents/.gitkeep
+backend/uploads/attachments/*
+!backend/uploads/attachments/.gitkeep
+
+# IDEs & System
+.DS_Store
+.vscode/
+.idea/

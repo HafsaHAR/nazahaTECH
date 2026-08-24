@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import {
   updateProfileApi,
   getActivitySummaryApi,
   getUserIdeasApi,
   getUserCommentsApi,
-  getUserChallengesApi,
-  getUserInteractionsApi
+  getUserChallengesApi
 } from '../api/authApi';
 import { getUserChallengeSubmissionsApi } from '../api/challengeApi';
 import './Profile.css';
@@ -15,6 +15,7 @@ import './Profile.css';
 export default function Profile() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   // États pour la mise à jour des informations personnelles
   const [firstName, setFirstName] = useState('');
@@ -33,14 +34,14 @@ export default function Profile() {
   });
 
   // Gestion des onglets d'activité
-  // 'ideas' | 'comments' | 'challenges' | 'challenge_submissions' | 'interactions'
   const [activeTab, setActiveTab] = useState('ideas');
   const [tabData, setTabData] = useState([]);
   const [challengeSubmissions, setChallengeSubmissions] = useState([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [tabLoading, setTabLoading] = useState(false);
 
+  // Synchronisation des informations utilisateur
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || '');
@@ -49,52 +50,60 @@ export default function Profile() {
     }
   }, [user]);
 
+  // Chargement du résumé léger d'activité
   useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        const data = await getActivitySummaryApi();
-        if (data && data.summary) {
-          setSummary(data.summary);
-        }
-      } catch (err) {
-        console.error('Erreur résumé d\'activité :', err);
-      }
-    };
     fetchSummary();
+    fetchChallengeSubmissions();
   }, []);
 
+  // Chargement dynamique des données de l'onglet actif
   useEffect(() => {
-    fetchTabData(activeTab, page);
+    if (activeTab !== 'challenge_submissions') {
+      fetchTabData();
+    }
   }, [activeTab, page]);
 
-  const fetchTabData = async (tab, currentPage) => {
-    setTabLoading(true);
+  const fetchSummary = async () => {
     try {
-      if (tab === 'ideas') {
-        const res = await getUserIdeasApi({ page: currentPage, limit: 5 });
-        setTabData(res.ideas || []);
-        setTotalPages(res.pages || 1);
-      } else if (tab === 'comments') {
-        const res = await getUserCommentsApi({ page: currentPage, limit: 5 });
-        setTabData(res.comments || []);
-        setTotalPages(res.pages || 1);
-      } else if (tab === 'challenges') {
-        const res = await getUserChallengesApi({ page: currentPage, limit: 5 });
-        setTabData(res.challenges || []);
-        setTotalPages(res.pages || 1);
-      } else if (tab === 'challenge_submissions') {
-        const res = await getUserChallengeSubmissionsApi();
-        setChallengeSubmissions(res.submissions || []);
-        setTotalPages(1);
-      } else if (tab === 'interactions') {
-        const res = await getUserInteractionsApi({ page: currentPage, limit: 5 });
-        setTabData(res.interactions || []);
-        setTotalPages(res.pages || 1);
+      const data = await getActivitySummaryApi();
+      if (data && data.summary) {
+        setSummary(data.summary);
       }
     } catch (err) {
-      console.error('Erreur chargement onglet :', err);
+      console.error('Erreur résumé d\'activité :', err);
+    }
+  };
+
+  const fetchChallengeSubmissions = async () => {
+    try {
+      const data = await getUserChallengeSubmissionsApi();
+      if (data && Array.isArray(data.submissions)) {
+        setChallengeSubmissions(data.submissions);
+      }
+    } catch (err) {
+      console.error('Erreur chargement soumissions aux défis :', err);
+    }
+  };
+
+  const fetchTabData = async () => {
+    try {
+      setTabLoading(true);
+      let res;
+      if (activeTab === 'ideas') {
+        res = await getUserIdeasApi(page);
+      } else if (activeTab === 'comments') {
+        res = await getUserCommentsApi(page);
+      } else if (activeTab === 'challenges') {
+        res = await getUserChallengesApi(page);
+      }
+
+      if (res) {
+        setTabData(res.data || []);
+        setHasMore(res.hasMore || false);
+      }
+    } catch (err) {
+      console.error('Erreur onglet activité :', err);
       setTabData([]);
-      setChallengeSubmissions([]);
     } finally {
       setTabLoading(false);
     }
@@ -107,21 +116,10 @@ export default function Profile() {
     setUpdateError('');
 
     try {
-      await updateProfileApi({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        phoneNumber: phoneNumber.trim()
-      });
-      setUpdateMsg('Profil mis à jour avec succès !');
-      if (user) {
-        user.firstName = firstName.trim();
-        user.lastName = lastName.trim();
-        user.name = `${firstName.trim()} ${lastName.trim()}`;
-        user.phoneNumber = phoneNumber.trim();
-      }
+      await updateProfileApi({ firstName, lastName, phoneNumber });
+      setUpdateMsg('✅ Profil mis à jour avec succès !');
     } catch (err) {
-      console.error('Erreur mise à jour profil :', err);
-      setUpdateError(err.response?.data?.message || 'Erreur lors de la mise à jour.');
+      setUpdateError(err.message || 'Erreur lors de la mise à jour du profil.');
     } finally {
       setUpdatingProfile(false);
     }
@@ -170,92 +168,99 @@ export default function Profile() {
                 <span>📧 {user?.email}</span>
                 <span>•</span>
                 <span className="category-tag">
-                  {user?.role === 'admin' ? '🛡️ Administrateur INPPLC' : '👤 Membre Citoyen'}
+                  {user?.role === 'admin' ? `🛡️ ${t('profile.role_admin')}` : `👤 ${t('profile.role_user')}`}
                 </span>
               </div>
             </div>
           </div>
 
           <button onClick={logout} className="btn-cancel" style={{ color: '#ef4444', borderColor: '#fee2e2' }}>
-            ➔ Déconnexion
+            ➔ {t('nav.logout')}
           </button>
         </div>
 
+        {/* Grille de Statistiques Légères */}
         <div className="profile-stats-grid">
           <div className="profile-stat-box">
-            <div className="profile-stat-val">{summary.ideasCount}</div>
-            <div className="profile-stat-lbl">Idées Soumises</div>
+            <span className="stat-number">{summary.ideasCount}</span>
+            <span className="stat-label">💡 Idées proposées</span>
           </div>
 
           <div className="profile-stat-box">
-            <div className="profile-stat-val">{summary.commentsCount}</div>
-            <div className="profile-stat-lbl">Commentaires</div>
+            <span className="stat-number">{challengeSubmissions.length}</span>
+            <span className="stat-label">🎯 Soumissions aux Défis</span>
           </div>
 
           <div className="profile-stat-box">
-            <div className="profile-stat-val">{summary.challengesCount}</div>
-            <div className="profile-stat-lbl">Défis & Favoris</div>
+            <span className="stat-number">{summary.commentsCount}</span>
+            <span className="stat-label">💬 Commentaires</span>
           </div>
 
           <div className="profile-stat-box">
-            <div className="profile-stat-val">{summary.interactionsCount}</div>
-            <div className="profile-stat-lbl">Interactions</div>
+            <span className="stat-number">{summary.challengesCount}</span>
+            <span className="stat-label">🏆 Défis favoris</span>
           </div>
         </div>
       </div>
 
-      {/* Informations Personnelles */}
+      {/* Formulaire d'Édition du Profil */}
       <div className="profile-section-card">
         <h2 className="section-card-title">
-          <span>📝</span> Mes Informations Personnelles
+          <span>⚙️</span> Informatiques Personnelles & Coordonnées
         </h2>
 
-        {updateMsg && <div className="alert-success" style={{ marginBottom: '1rem' }}>{updateMsg}</div>}
-        {updateError && <div className="alert-error" style={{ marginBottom: '1rem' }}>{updateError}</div>}
+        {updateMsg && <div className="alert-success" style={{ marginBottom: '1.25rem' }}>{updateMsg}</div>}
+        {updateError && <div className="alert-error" style={{ marginBottom: '1.25rem' }}>{updateError}</div>}
 
-        <form onSubmit={handleUpdateProfile}>
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label>Prénom</label>
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Votre prénom"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Nom</label>
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Votre nom"
-              />
-            </div>
+        <form onSubmit={handleUpdateProfile} className="profile-form-grid">
+          <div className="form-group-custom">
+            <label>Prénom</label>
+            <input
+              type="text"
+              placeholder="Votre prénom"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
           </div>
 
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label>Adresse Email (Lecture seule)</label>
-              <input type="email" value={user?.email || ''} disabled style={{ backgroundColor: '#f3f4f6' }} />
-            </div>
-
-            <div className="form-group">
-              <label>Numéro de Téléphone</label>
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="Ex: +212 600 000 000"
-              />
-            </div>
+          <div className="form-group-custom">
+            <label>Nom de famille</label>
+            <input
+              type="text"
+              placeholder="Votre nom"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+            />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <button type="submit" className="btn-submit-green" disabled={updatingProfile}>
-              {updatingProfile ? 'Sauvegarde...' : 'Enregistrer les modifications'}
+          <div className="form-group-custom">
+            <label>Numéro de Téléphone</label>
+            <input
+              type="tel"
+              placeholder="+212 6 00 00 00 00"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group-custom">
+            <label>Adresse Email (Identifiant)</label>
+            <input
+              type="email"
+              disabled
+              value={user?.email || ''}
+              style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed', color: '#6b7280' }}
+            />
+          </div>
+
+          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <button
+              type="submit"
+              disabled={updatingProfile}
+              className="btn-hero-primary"
+              style={{ padding: '0.75rem 1.75rem' }}
+            >
+              {updatingProfile ? '⏳ Enregistrement...' : `💾 ${t('action.save')}`}
             </button>
           </div>
         </form>
@@ -273,13 +278,13 @@ export default function Profile() {
             className={`activity-tab-btn ${activeTab === 'ideas' ? 'active' : ''}`}
             onClick={() => { setActiveTab('ideas'); setPage(1); }}
           >
-            💡 Mes Idées Générales ({summary.ideasCount})
+            {t('profile.tab_my_ideas')} ({summary.ideasCount})
           </button>
           <button
             className={`activity-tab-btn ${activeTab === 'challenge_submissions' ? 'active' : ''}`}
             onClick={() => { setActiveTab('challenge_submissions'); setPage(1); }}
           >
-            🎯 Mes Soumissions aux Défis
+            {t('profile.tab_my_challenges')} ({challengeSubmissions.length})
           </button>
           <button
             className={`activity-tab-btn ${activeTab === 'comments' ? 'active' : ''}`}
@@ -295,141 +300,72 @@ export default function Profile() {
           </button>
         </div>
 
-        {tabLoading ? (
-          <div style={{ padding: '2.5rem', textAlign: 'center', color: '#6b7280' }}>
-            Chargement de vos activités...
-          </div>
-        ) : (activeTab === 'challenge_submissions' ? challengeSubmissions.length === 0 : tabData.length === 0) ? (
-          <div className="empty-state-box">
-            <div className="empty-state-icon">
-              {activeTab === 'ideas' ? '💡' : activeTab === 'challenge_submissions' ? '🎯' : activeTab === 'comments' ? '💬' : '🏆'}
-            </div>
-            <h3 style={{ fontSize: '1.1rem', color: '#111827', marginBottom: '0.35rem' }}>
-              Aucune activité enregistrée ici
-            </h3>
-            <p style={{ fontSize: '0.875rem' }}>
-              {activeTab === 'ideas'
-                ? 'Vous n\'avez pas encore proposé d\'idée générale. Soumettez votre première contribution !'
-                : activeTab === 'challenge_submissions'
-                ? 'Vous n\'avez pas encore soumis d\'idée à un défi d\'innovation.'
-                : activeTab === 'comments'
-                ? 'Vous n\'avez pas encore rédigé de commentaire.'
-                : 'Aucun défi sauvegardé pour le moment.'}
-            </p>
+        {/* Onglet Soumissions aux Défis */}
+        {activeTab === 'challenge_submissions' ? (
+          <div>
+            {challengeSubmissions.length === 0 ? (
+              <div className="empty-state-box">
+                <div className="empty-icon">🎯</div>
+                <h3>Vous n'avez soumis aucune idée dans le cadre d'un défi</h3>
+                <p>Découvrez les défis stratégiques de l'INPPLC et proposez vos solutions innovantes !</p>
+                <button onClick={() => navigate('/challenges')} className="btn-hero-primary" style={{ marginTop: '1rem' }}>
+                  Voir les défis ouverts
+                </button>
+              </div>
+            ) : (
+              <div className="activity-items-list">
+                {challengeSubmissions.map((sub) => (
+                  <div key={sub._id} className="activity-item-card" onClick={() => navigate(`/ideas/${sub._id}`)} style={{ cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span className="category-tag" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontWeight: 700 }}>
+                        🏆 Défi : {sub.challengeTitle || sub.challengeId?.title || 'Défi INPPLC'}
+                      </span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: sub.status === 'approved' ? '#15803d' : '#b45309', backgroundColor: sub.status === 'approved' ? '#dcfce7' : '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '6px' }}>
+                        {sub.status === 'approved' ? '🟢 Approuvé' : '⏳ En cours d\'examen'}
+                      </span>
+                    </div>
+
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827', marginBottom: '0.35rem' }}>
+                      {sub.title}
+                    </h4>
+                    <p style={{ fontSize: '0.875rem', color: '#4b5563', lineHeight: 1.5, marginBottom: '0.75rem' }}>
+                      {sub.description}
+                    </p>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.775rem', color: '#9ca3af' }}>
+                      <span>Déposé le {new Date(sub.createdAt).toLocaleDateString('fr-FR')}</span>
+                      <span style={{ color: 'var(--primary-green)', fontWeight: 700 }}>Voir la soumission →</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div>
-            {/* Onglet: Mes Idées Générales */}
-            {activeTab === 'ideas' && tabData.map((idea) => (
-              <div
-                key={idea._id}
-                className="activity-item-card"
-                onClick={() => navigate(`/ideas/${idea._id}`)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.35rem' }}>
-                    <span className="idea-badge">{idea.category}</span>
-                    <span className={`status-tag ${idea.status === 'approved' ? 'approved' : 'pending'}`}>
-                      {idea.status === 'approved' ? 'Publiée' : 'En modération'}
-                    </span>
+            {tabLoading ? (
+              <div style={{ padding: '2.5rem', textAlign: 'center', color: '#6b7280' }}>
+                Chargement de vos activités...
+              </div>
+            ) : tabData.length === 0 ? (
+              <div className="empty-state-box">
+                <div className="empty-icon">📊</div>
+                <h3>Aucune activité trouvée dans cet onglet</h3>
+                <p>Vos contributions apparaîtront ici au fur et à mesure de votre utilisation.</p>
+              </div>
+            ) : (
+              <div className="activity-items-list">
+                {tabData.map((item) => (
+                  <div key={item._id} className="activity-item-card" onClick={() => item.title && navigate(activeTab === 'challenges' ? `/challenges/${item._id}` : `/ideas/${item._id || item.idea}`)} style={{ cursor: 'pointer' }}>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', marginBottom: '0.35rem' }}>
+                      {item.title || item.content || 'Contribution'}
+                    </h4>
+                    {item.description && <p style={{ fontSize: '0.85rem', color: '#4b5563' }}>{item.description}</p>}
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
+                      {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+                    </div>
                   </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>{idea.title}</h4>
-                </div>
-                <div style={{ fontWeight: 700, color: 'var(--primary-green)' }}>
-                  👍 {idea.voteCount || 0} votes
-                </div>
-              </div>
-            ))}
-
-            {/* Onglet Spécifique: Mes Soumissions aux Défis (Historique Personnel du Participant) */}
-            {activeTab === 'challenge_submissions' && challengeSubmissions.map((sub) => (
-              <div
-                key={sub._id}
-                className="activity-item-card"
-                style={{ borderLeft: '4px solid var(--primary-green)', padding: '1.25rem' }}
-              >
-                <div>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem' }}>
-                    <span className="idea-badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1' }}>
-                      🏆 Défi : {sub.challenge?.title || 'Défi INPPLC'}
-                    </span>
-                    <span className={`status-tag ${sub.status === 'approved' ? 'approved' : 'pending'}`}>
-                      {sub.status === 'approved' ? '🟢 Approuvé' : '⏳ En cours d\'examen'}
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827', marginBottom: '0.35rem' }}>
-                    Idée soumise : {sub.submittedIdea?.title || 'Idée transmise'}
-                  </h4>
-                  <p style={{ fontSize: '0.875rem', color: '#4b5563', lineHeight: 1.5 }}>
-                    {sub.submittedIdea?.description || 'Description de la soumission'}
-                  </p>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'none' }}>
-                  Soumis le {new Date(sub.createdAt).toLocaleDateString('fr-FR')}
-                </div>
-              </div>
-            ))}
-
-            {/* Onglet: Mes Commentaires */}
-            {activeTab === 'comments' && tabData.map((comment) => (
-              <div key={comment._id} className="activity-item-card">
-                <div>
-                  <span style={{ fontSize: '0.775rem', color: '#9ca3af', fontWeight: 700 }}>
-                    Sur l'idée : {comment.ideaId?.title || 'Idée collaborative'}
-                  </span>
-                  <p style={{ fontSize: '0.925rem', color: '#374151', marginTop: '0.25rem' }}>
-                    "{comment.content}"
-                  </p>
-                </div>
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                  {new Date(comment.createdAt).toLocaleDateString('fr-FR')}
-                </span>
-              </div>
-            ))}
-
-            {/* Onglet: Mes Défis Favoris */}
-            {activeTab === 'challenges' && tabData.map((ch) => (
-              <div
-                key={ch._id}
-                className="activity-item-card"
-                onClick={() => navigate(`/challenges/${ch._id}`)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div>
-                  <span className="idea-badge" style={{ marginBottom: '0.35rem', display: 'inline-block' }}>
-                    {ch.category}
-                  </span>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>{ch.title}</h4>
-                </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-green)' }}>
-                  ★ Enregistré
-                </span>
-              </div>
-            ))}
-
-            {/* Pagination */}
-            {activeTab !== 'challenge_submissions' && totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                  className="btn-cancel"
-                  style={{ fontSize: '0.85rem' }}
-                >
-                  ← Précédent
-                </button>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4b5563' }}>
-                  Page {page} sur {totalPages}
-                </span>
-                <button
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                  className="btn-cancel"
-                  style={{ fontSize: '0.85rem' }}
-                >
-                  Suivant →
-                </button>
+                ))}
               </div>
             )}
           </div>

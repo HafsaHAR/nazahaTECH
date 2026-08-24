@@ -10,7 +10,7 @@ import './Dashboard.css';
 export default function Initiatives() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, translateText } = useLanguage();
   const isAdmin = user?.role === 'admin';
 
   const [initiatives, setInitiatives] = useState([]);
@@ -51,10 +51,20 @@ export default function Initiatives() {
   const fetchInitiatives = async () => {
     try {
       setLoading(true);
-      const data = await getInitiativesApi({ search, domain, country, maturityLevel });
-      setInitiatives(data.initiatives || []);
+      const data = await getInitiativesApi({
+        search,
+        domain,
+        country,
+        maturityLevel
+      });
+      if (data && Array.isArray(data.initiatives)) {
+        setInitiatives(data.initiatives);
+      } else {
+        setInitiatives([]);
+      }
     } catch (err) {
-      console.error('Erreur chargement annuaire initiatives :', err);
+      console.error('Erreur chargement initiatives :', err);
+      setInitiatives([]);
     } finally {
       setLoading(false);
     }
@@ -62,36 +72,42 @@ export default function Initiatives() {
 
   const handleAddInitiative = async (e) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newOrg.trim() || !newDesc.trim()) return;
+
+    if (!newTitle.trim() || !newOrg.trim() || !newDesc.trim()) {
+      setMsg('❌ Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
+
+    setSubmitting(true);
+    setMsg('');
 
     try {
-      setSubmitting(true);
-      setMsg('');
       const tagsArray = newTagsStr.split(',').map((t) => t.trim()).filter(Boolean);
 
       await createInitiativeApi({
         title: newTitle.trim(),
         organization: newOrg.trim(),
         country: newCountry,
-        city: newCity.trim() || 'Rabat',
+        city: newCity.trim(),
         domain: newDomain,
         description: newDesc.trim(),
         maturityLevel: newMaturity,
         actorType: newActorType,
-        year: Number(newYear) || 2025,
-        contactEmail: newContactEmail.trim() || 'contact@inpplc.ma',
-        contactWebsite: newContactWebsite.trim() || 'https://inpplc.ma',
+        year: parseInt(newYear, 10) || 2025,
+        contactEmail: newContactEmail.trim(),
+        contactWebsite: newContactWebsite.trim(),
         tags: tagsArray
       });
 
-      setMsg('✅ Initiative ajoutée à l\'Annuaire avec succès !');
-      setShowAddForm(false);
+      setMsg('✅ Nouvelle initiative publiée avec succès dans l\'Annuaire !');
       setNewTitle('');
       setNewOrg('');
       setNewDesc('');
+      setShowAddForm(false);
       fetchInitiatives();
     } catch (err) {
-      setMsg('❌ Erreur lors de l\'ajout de l\'initiative.');
+      console.error('Erreur ajout initiative :', err);
+      setMsg(`❌ Erreur : ${err.message || 'Échec de la création.'}`);
     } finally {
       setSubmitting(false);
     }
@@ -110,9 +126,9 @@ export default function Initiatives() {
   };
 
   const getMaturityLabel = (mat) => {
-    if (mat === 'Deployed') return '🟢 Déployé';
-    if (mat === 'POC') return '🟠 POC / Prototype';
-    return '💡 Idée';
+    if (mat === 'Deployed') return translateText('Déployé');
+    if (mat === 'POC') return translateText('POC / Prototype');
+    return translateText('Idée');
   };
 
   return (
@@ -121,10 +137,10 @@ export default function Initiatives() {
       <div className="section-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="section-title" style={{ fontSize: '1.85rem' }}>
-            📋 Annuaire des Initiatives Innovantes
+            {t('initiatives.title')}
           </h1>
           <p className="section-subtitle">
-            Découvrez le répertoire public des projets et initiatives d'innovation de probité et de lutte contre la corruption au Maroc et dans le monde.
+            {t('initiatives.sub')}
           </p>
         </div>
 
@@ -134,7 +150,7 @@ export default function Initiatives() {
             className="btn-hero-primary"
             style={{ padding: '0.65rem 1.25rem', fontSize: '0.9rem' }}
           >
-            {showAddForm ? '✕ Fermer' : '+ Ajouter une Initiative'}
+            {showAddForm ? t('action.close') : t('action.add_init')}
           </button>
         )}
       </div>
@@ -180,9 +196,9 @@ export default function Initiatives() {
                 onChange={(e) => setNewMaturity(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
               >
-                <option value="Deployed">Deployed (Déployé)</option>
-                <option value="POC">POC (Prototype)</option>
-                <option value="Idea">Idea (Idée)</option>
+                <option value="Deployed">Deployed (En production)</option>
+                <option value="POC">POC (Prototype / Pilote)</option>
+                <option value="Idea">Idea (Concept)</option>
               </select>
             </div>
           </div>
@@ -205,25 +221,19 @@ export default function Initiatives() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Type d'Acteur</label>
-              <select
-                value={newActorType}
-                onChange={(e) => setNewActorType(e.target.value)}
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Pays</label>
+              <input
+                type="text"
+                value={newCountry}
+                onChange={(e) => setNewCountry(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-              >
-                <option value="Public">Public</option>
-                <option value="ONG">ONG</option>
-                <option value="Startup">Startup</option>
-                <option value="Académie">Académie</option>
-                <option value="International">International</option>
-              </select>
+              />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Pays / Ville</label>
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Ville</label>
               <input
                 type="text"
-                placeholder="Rabat, Maroc"
                 value={newCity}
                 onChange={(e) => setNewCity(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
@@ -242,11 +252,11 @@ export default function Initiatives() {
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Description détaillée *</label>
+            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Description de l'initiative *</label>
             <textarea
               required
               rows={3}
-              placeholder="Description des objectifs, du périmètre et de l'impact..."
+              placeholder="Présentation synthétique des objectifs, impacts et fonctionnement de l'initiative..."
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
               style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
@@ -255,7 +265,7 @@ export default function Initiatives() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Email de contact</label>
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Email de Contact</label>
               <input
                 type="email"
                 placeholder="contact@initiative.ma"
@@ -301,7 +311,7 @@ export default function Initiatives() {
             <span className="challenge-search-icon">🔍</span>
             <input
               type="text"
-              placeholder="Rechercher une initiative, organisation ou mot-clé..."
+              placeholder={t('initiatives.search_ph')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -314,7 +324,7 @@ export default function Initiatives() {
           >
             {domainOptions.map((d) => (
               <option key={d} value={d}>
-                Domaine: {d}
+                {t('meta.domain')}: {translateText(d)}
               </option>
             ))}
           </select>
@@ -326,7 +336,7 @@ export default function Initiatives() {
           >
             {maturityOptions.map((m) => (
               <option key={m} value={m}>
-                Maturité: {m === 'Tous' ? 'Toutes' : getMaturityLabel(m)}
+                {t('meta.maturity')}: {m === 'Tous' ? translateText('Tous') : getMaturityLabel(m)}
               </option>
             ))}
           </select>
@@ -338,7 +348,7 @@ export default function Initiatives() {
           >
             {countryOptions.map((c) => (
               <option key={c} value={c}>
-                Pays: {c}
+                {t('meta.country')}: {translateText(c)}
               </option>
             ))}
           </select>
@@ -355,15 +365,15 @@ export default function Initiatives() {
         <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '3.5rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
           <h3 style={{ color: '#111827', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
-            Aucune initiative ne correspond à vos critères
+            Aucune initiative ne correspond à vos filtres
           </h3>
           <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
-            Essayez de réinitialiser vos filtres de recherche.
+            Modifiez vos mots-clés ou réinitialisez le filtre par domaine et maturité.
           </p>
           <button
             onClick={() => { setSearch(''); setDomain('Tous'); setCountry('Tous'); setMaturityLevel('Tous'); }}
-            className="btn-hero-primary"
-            style={{ margin: '0 auto', textDecoration: 'none' }}
+            className="btn-download-doc"
+            style={{ margin: '0 auto' }}
           >
             Réinitialiser les filtres
           </button>
@@ -373,9 +383,9 @@ export default function Initiatives() {
           {initiatives.map((init) => (
             <div
               key={init._id}
-              className="initiative-card"
+              className="idea-card initiative-card"
               onClick={() => navigate(`/initiatives/${init._id}`)}
-              title="Cliquer pour voir la fiche détaillée de l'initiative"
+              style={{ cursor: 'pointer' }}
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
@@ -384,7 +394,7 @@ export default function Initiatives() {
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
-                      📍 {init.city}, {init.country}
+                      📍 {init.city}, {translateText(init.country)}
                     </span>
                     {isAdmin && (
                       <button
@@ -397,18 +407,18 @@ export default function Initiatives() {
                     )}
                   </div>
                 </div>
-                <h3 className="idea-title" style={{ fontSize: '1.15rem' }}>{init.title}</h3>
+                <h3 className="idea-title" style={{ fontSize: '1.15rem' }}>{translateText(init.title)}</h3>
                 <p style={{ fontSize: '0.825rem', color: 'var(--primary-green)', fontWeight: 700, marginBottom: '0.5rem' }}>
-                  {init.organization}
+                  {translateText(init.organization)}
                 </p>
-                <p className="idea-desc">{init.description}</p>
+                <p className="idea-desc">{translateText(init.description)}</p>
               </div>
 
               <div className="idea-footer" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                 <div className="initiative-tags-group">
                   {init.tags?.map((tag) => (
                     <span key={tag} className="initiative-tag">
-                      #{tag}
+                      #{translateText(tag)}
                     </span>
                   ))}
                 </div>

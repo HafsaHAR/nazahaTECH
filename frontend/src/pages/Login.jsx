@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Link, useNavigate } from 'react-router-dom';
+import LanguageDropdown from '../components/LanguageDropdown';
 import logo from '../assets/inpplc-logo.png';
 import './AuthPage.css';
 
@@ -12,6 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleBlur = (field) => {
@@ -58,9 +61,9 @@ export default function Login() {
         </div>
 
         <div className="hero-body">
-          <h1 className="hero-title">Ensemble pour la probité et la transparence.</h1>
+          <h1 className="hero-title">{t('dashboard.hero_title')}</h1>
           <p className="hero-description">
-            La plateforme d'innovation citoyenne de l'Instance Nationale de la Probité, de la Prévention et de la Lutte contre la Corruption.
+            {t('dashboard.hero_sub')}
           </p>
         </div>
 
@@ -69,17 +72,21 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Formulaire Blanc Droit */}
+      {/* Formulaire Blanc Droit avec Sélecteur de Langue */}
       <div className="auth-form-wrapper">
+        <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 10 }}>
+          <LanguageDropdown />
+        </div>
+
         <div className="auth-form-card">
-          <h2 className="form-title">Se connecter</h2>
-          <p className="form-subtitle">Accédez à votre espace personnel.</p>
+          <h2 className="form-title">{t('login.title')}</h2>
+          <p className="form-subtitle">{t('login.sub')}</p>
 
           {error && <div className="alert-error">{error}</div>}
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t('login.email')} *</label>
               <input
                 type="email"
                 id="email"
@@ -94,7 +101,7 @@ export default function Login() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Mot de passe</label>
+              <label htmlFor="password">{t('login.password')} *</label>
               <input
                 type="password"
                 id="password"
@@ -102,21 +109,21 @@ export default function Login() {
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 onBlur={() => handleBlur('password')}
                 className={passwordError ? 'input-invalid' : ''}
-                placeholder="Votre mot de passe"
+                placeholder="••••••••"
                 required
               />
               {passwordError && <span className="field-error">{passwordError}</span>}
             </div>
 
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Connexion en cours...' : 'Connexion'}
+              {loading ? 'Connexion...' : t('login.submit')}
             </button>
           </form>
 
           <div className="auth-toggle">
-            Pas encore de compte ?
+            {t('login.no_account')}{' '}
             <Link to="/register" className="auth-toggle-link">
-              S'inscrire
+              {t('nav.register')}
             </Link>
           </div>
         </div>

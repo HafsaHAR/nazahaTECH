@@ -10,7 +10,7 @@ const initialChallenges = [
     status: 'open',
     reward: '50 000 MAD + accompagnement',
     duration: '4 semaines',
-    startDate: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000),
+    startDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
     endDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
     deadline: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
     locationMode: 'remote',
@@ -51,7 +51,7 @@ const initialChallenges = [
     status: 'open',
     reward: '60 000 MAD + incubation',
     duration: '6 semaines',
-    startDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
+    startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
     endDate: new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000),
     deadline: new Date(now.getTime() + 22 * 24 * 60 * 60 * 1000),
     locationMode: 'remote',
@@ -90,6 +90,14 @@ const runSeedChallengesIfEmpty = async () => {
     if (count === 0) {
       await Challenge.insertMany(initialChallenges);
       console.log('🌱 Base de données initialisée avec 4 défis INPPLC complets.');
+    } else {
+      // Mettre à jour les dates des défis existants pour garantir la cohérence des statuts
+      for (const item of initialChallenges) {
+        await Challenge.updateOne(
+          { title: item.title },
+          { $set: { startDate: item.startDate, endDate: item.endDate, status: item.status } }
+        );
+      }
     }
   } catch (error) {
     console.error('Erreur lors du seeding des défis :', error);

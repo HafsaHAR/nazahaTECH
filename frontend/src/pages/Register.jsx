@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Link, useNavigate } from 'react-router-dom';
+import LanguageDropdown from '../components/LanguageDropdown';
 import logo from '../assets/inpplc-logo.png';
 import './AuthPage.css';
 
@@ -20,6 +22,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
 
   const { register } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -60,7 +63,6 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Marquer tous les champs comme touchés
     setTouched({
       firstName: true,
       lastName: true,
@@ -119,9 +121,9 @@ export default function Register() {
         </div>
 
         <div className="hero-body">
-          <h1 className="hero-title">Rejoignez une communauté engagée pour la probité.</h1>
+          <h1 className="hero-title">{t('register.sub')}</h1>
           <p className="hero-description">
-            Soumettez des idées, participez à des défis et contribuez à des institutions plus transparentes.
+            {t('dashboard.hero_sub')}
           </p>
         </div>
 
@@ -130,11 +132,15 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Formulaire Blanc Droit */}
+      {/* Formulaire Blanc Droit avec Sélecteur de Langue */}
       <div className="auth-form-wrapper">
+        <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 10 }}>
+          <LanguageDropdown />
+        </div>
+
         <div className="auth-form-card">
-          <h2 className="form-title">Créer un compte</h2>
-          <p className="form-subtitle">Rejoignez la plateforme en quelques secondes.</p>
+          <h2 className="form-title">{t('register.title')}</h2>
+          <p className="form-subtitle">{t('register.sub')}</p>
 
           {error && <div className="alert-error">{error}</div>}
 
@@ -142,7 +148,7 @@ export default function Register() {
             {/* Prénom et Nom */}
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="firstName">Prénom *</label>
+                <label htmlFor="firstName">* {t('register.first_name')}</label>
                 <input
                   type="text"
                   id="firstName"
@@ -158,7 +164,7 @@ export default function Register() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="lastName">Nom *</label>
+                <label htmlFor="lastName">* {t('register.last_name')}</label>
                 <input
                   type="text"
                   id="lastName"
@@ -176,7 +182,7 @@ export default function Register() {
 
             {/* Email et Confirmation Email */}
             <div className="form-group">
-              <label htmlFor="email">Email *</label>
+              <label htmlFor="email">* {t('login.email')}</label>
               <input
                 type="email"
                 id="email"
@@ -192,7 +198,7 @@ export default function Register() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmEmail">Confirmer l'email *</label>
+              <label htmlFor="confirmEmail">* {t('register.confirm_email')}</label>
               <input
                 type="email"
                 id="confirmEmail"
@@ -209,7 +215,7 @@ export default function Register() {
 
             {/* Téléphone */}
             <div className="form-group">
-              <label htmlFor="phoneNumber">Numéro de téléphone</label>
+              <label htmlFor="phoneNumber">{t('register.phone')}</label>
               <input
                 type="tel"
                 id="phoneNumber"
@@ -225,7 +231,7 @@ export default function Register() {
 
             {/* Mot de passe et Confirmation */}
             <div className="form-group">
-              <label htmlFor="password">Mot de passe *</label>
+              <label htmlFor="password">* {t('login.password')}</label>
               <input
                 type="password"
                 id="password"
@@ -234,14 +240,14 @@ export default function Register() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 className={errors.password ? 'input-invalid' : ''}
-                placeholder="Au moins 6 caractères"
+                placeholder={t('register.password_ph')}
                 required
               />
               {errors.password && <span className="field-error">{errors.password}</span>}
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmPassword">Confirmer le mot de passe *</label>
+              <label htmlFor="confirmPassword">* {t('register.confirm_password')}</label>
               <input
                 type="password"
                 id="confirmPassword"
@@ -250,21 +256,21 @@ export default function Register() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 className={errors.confirmPassword ? 'input-invalid' : ''}
-                placeholder="Répétez votre mot de passe"
+                placeholder="••••••••"
                 required
               />
               {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
             </div>
 
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Création...' : 'Créer mon compte'}
+              {loading ? 'Création...' : t('register.submit')}
             </button>
           </form>
 
           <div className="auth-toggle">
-            Déjà inscrit ?
+            {t('register.has_account')}{' '}
             <Link to="/login" className="auth-toggle-link">
-              Se connecter
+              {t('nav.login')}
             </Link>
           </div>
         </div>

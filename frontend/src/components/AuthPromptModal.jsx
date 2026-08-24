@@ -10,7 +10,7 @@ export default function AuthPromptModal({ isOpen, onClose, actionName = '' }) {
   return (
     <div className="auth-modal-overlay" onClick={onClose}>
       <div className="auth-modal-content" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="auth-modal-close-btn" onClick={onClose} title="Fermer">
+        <button type="button" className="auth-modal-close-btn" onClick={onClose} title={t('action.close')}>
           ✕
         </button>
 
@@ -19,13 +19,11 @@ export default function AuthPromptModal({ isOpen, onClose, actionName = '' }) {
         </div>
 
         <h3 className="auth-modal-title">
-          Connexion requise
+          {t('guest.login_btn')}
         </h3>
 
         <p className="auth-modal-text">
-          {actionName
-            ? `Pour ${actionName} sur NazahaTECH, veuillez vous connecter ou créer un compte citoyen.`
-            : 'Veuillez vous connecter à votre compte citoyen ou créer un compte pour participer.'}
+          {t('guest.login_prompt')}
         </p>
 
         <div className="auth-modal-buttons">
@@ -33,7 +31,7 @@ export default function AuthPromptModal({ isOpen, onClose, actionName = '' }) {
             {t('nav.login')}
           </Link>
           <Link to="/register" className="btn-modal-register" onClick={onClose}>
-            Créer un compte
+            {t('nav.register')}
           </Link>
         </div>
       </div>

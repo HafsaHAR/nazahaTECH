@@ -205,7 +205,15 @@ const getChallenges = async (req, res) => {
     const filter = {};
 
     if (status && status !== 'all') {
-      filter.status = status;
+      if (status === 'open') {
+        filter.status = { $in: ['open', 'OUVERT', 'OPEN'] };
+      } else if (status === 'in_progress') {
+        filter.status = { $in: ['in_progress', 'EN_COURS'] };
+      } else if (status === 'closed') {
+        filter.status = { $in: ['closed', 'CLOTURE', 'CLOSED'] };
+      } else {
+        filter.status = status;
+      }
     }
 
     if (category && category !== 'Toutes' && category !== 'All') {

@@ -117,12 +117,16 @@ button, input, select, textarea {
   color: #94a3b8 !important;
 }
 
-/* Orientation RTL pour l'Arabe */
+/* Orientation RTL Parfaite pour la Langue Arabe */
 [dir="rtl"] {
   font-family: 'Cairo', 'Inter', sans-serif;
+  direction: rtl;
+  text-align: right;
 }
 
 [dir="rtl"] .sidebar {
+  left: auto !important;
+  right: 0 !important;
   border-right: none !important;
   border-left: 1px solid #1a1f28 !important;
 }
@@ -132,8 +136,33 @@ button, input, select, textarea {
   margin-right: 250px !important;
 }
 
+[dir="rtl"] .nav-item {
+  border-left: none !important;
+  border-right: 3px solid transparent !important;
+}
+
+[dir="rtl"] .nav-item.active {
+  border-right-color: #eab308 !important;
+}
+
+[dir="rtl"] .topbar {
+  justify-content: flex-start !important;
+}
+
+[dir="rtl"] .topbar-user-pill {
+  flex-direction: row-reverse !important;
+}
+
+[dir="rtl"] .user-info-text {
+  align-items: flex-start !important;
+}
+
 @media (max-width: 900px) {
   [dir="rtl"] .app-main-content {
     margin-right: 0 !important;
+  }
+  [dir="rtl"] .sidebar {
+    position: relative !important;
+    right: auto !important;
   }
 }

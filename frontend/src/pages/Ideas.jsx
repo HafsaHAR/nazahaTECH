@@ -11,7 +11,7 @@ import './Dashboard.css';
 export default function Ideas() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { lang, t, translateText } = useLanguage();
 
   const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
@@ -38,18 +38,15 @@ export default function Ideas() {
     try {
       setLoading(true);
       setError('');
-
-      const params = {};
-      if (category !== 'Toutes') params.category = category;
-      if (search.trim()) params.search = search.trim();
-      if (sort) params.sort = sort;
-      if (status !== 'all') params.status = status;
-
-      const data = await getIdeasApi(params);
-      setIdeas(data.ideas || []);
+      const data = await getIdeasApi({ status, search, category, sort });
+      if (data && Array.isArray(data.ideas)) {
+        setIdeas(data.ideas);
+      } else {
+        setIdeas([]);
+      }
     } catch (err) {
-      console.error('Erreur lors du chargement des idées :', err);
-      setError('Impossible de charger la liste des idées.');
+      console.error('Erreur chargement idées :', err);
+      setError(err.message || 'Erreur lors du chargement des idées.');
     } finally {
       setLoading(false);
     }
@@ -60,52 +57,51 @@ export default function Ideas() {
     setAuthModalOpen(true);
   };
 
-  const handleVoteOptimistic = async (e, ideaId) => {
+  const handleVote = async (e, ideaId) => {
     e.stopPropagation();
 
     if (!user) {
-      triggerAuthPrompt('voter pour cette idée citoyenne');
+      triggerAuthPrompt('voter pour cette idée');
       return;
     }
 
-    const originalIdeas = [...ideas];
-
-    setIdeas((prev) =>
-      prev.map((item) => {
-        if (item._id === ideaId) {
-          const hasVoted = item.voters?.includes(user?._id);
-          const newVoteCount = hasVoted ? Math.max(0, (item.voteCount || 1) - 1) : (item.voteCount || 0) + 1;
-          return { ...item, voteCount: newVoteCount };
-        }
-        return item;
-      })
-    );
-
     try {
-      const response = await voteIdeaApi(ideaId);
-      if (response && response.idea) {
-        setIdeas((prev) =>
-          prev.map((item) => (item._id === ideaId ? response.idea : item))
-        );
-      }
+      setIdeas((prev) =>
+        prev.map((item) => {
+          if (item._id === ideaId) {
+            const hasVoted = item.votes?.includes(user.id);
+            const newVotes = hasVoted
+              ? item.votes.filter((id) => id !== user.id)
+              : [...(item.votes || []), user.id];
+            return { ...item, votes: newVotes, votesCount: newVotes.length };
+          }
+          return item;
+        })
+      );
+      await voteIdeaApi(ideaId);
     } catch (err) {
-      console.error('Erreur lors du vote, annulation optimiste :', err);
-      setIdeas(originalIdeas);
+      console.error('Erreur vote :', err);
+      fetchIdeas();
     }
   };
 
   const getAuthorName = (author) => {
-    if (!author) return 'Citoyen INPPLC';
+    if (!author) return 'Citoyen Anonyme';
     if (typeof author === 'object') {
-      if (author.firstName && author.lastName) return `${author.firstName} ${author.lastName}`;
-      if (author.name) return author.name;
+      if (author.firstName && author.lastName && author.firstName !== 'undefined') {
+        return `${author.firstName} ${author.lastName}`;
+      }
+      if (author.name && author.name !== 'undefined undefined') {
+        return author.name;
+      }
+      return author.email || 'Citoyen NazahaTECH';
     }
-    return 'Citoyen INPPLC';
+    return author;
   };
 
   return (
-    <div className="ideas-container">
-      {/* Fenêtre Modale d'Invite à la Connexion pour le Visiteur */}
+    <div className="ideas-page-container">
+      {/* Fenêtre Modale d'invitation à la connexion pour les visiteurs */}
       <AuthPromptModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -116,12 +112,13 @@ export default function Ideas() {
       <div className="section-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="section-title" style={{ fontSize: '1.85rem' }}>
-            <span>💡</span> {t('ideas.title')}
+            {t('ideas.title')}
           </h1>
           <p className="section-subtitle">
             {t('ideas.sub')}
           </p>
         </div>
+
         {user ? (
           <Link to="/submit-idea" className="btn-hero-primary" style={{ textDecoration: 'none' }}>
             + {t('nav.new_idea')}
@@ -138,27 +135,27 @@ export default function Ideas() {
         )}
       </div>
 
-      {/* Barre de Filtrage Identique à celle des Défis */}
+      {/* Barre de Filtrage */}
       <div className="challenges-filter-panel">
         <div className="status-tabs-row">
           <button
             className={`status-tab-btn ${status === 'all' ? 'active' : ''}`}
             onClick={() => setStatus('all')}
           >
-            Toutes les idées
+            {translateText('Toutes les idées')}
           </button>
           <button
             className={`status-tab-btn ${status === 'approved' ? 'active' : ''}`}
             onClick={() => setStatus('approved')}
           >
-            🟢 Publiées
+            {translateText('Publiées')}
           </button>
           {user?.role === 'admin' && (
             <button
               className={`status-tab-btn ${status === 'pending' ? 'active' : ''}`}
               onClick={() => setStatus('pending')}
             >
-              🟠 En modération
+              {translateText('En modération')}
             </button>
           )}
         </div>
@@ -168,7 +165,7 @@ export default function Ideas() {
             <span className="challenge-search-icon">🔍</span>
             <input
               type="text"
-              placeholder="Rechercher une idée..."
+              placeholder={t('ideas.search_ph')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -181,7 +178,7 @@ export default function Ideas() {
           >
             {categoriesList.map((cat) => (
               <option key={cat} value={cat}>
-                Catégorie: {cat}
+                {cat === 'Toutes' ? t('ideas.filter_all_cat') : translateText(cat)}
               </option>
             ))}
           </select>
@@ -191,15 +188,15 @@ export default function Ideas() {
             value={sort}
             onChange={(e) => setSort(e.target.value)}
           >
-            <option value="recent">⏱️ Plus récents</option>
-            <option value="popular">👍 Plus populaires</option>
+            <option value="recent">{t('ideas.sort_newest')}</option>
+            <option value="popular">{t('ideas.sort_popular')}</option>
           </select>
         </div>
       </div>
 
-      {error && <div className="alert-error" style={{ marginBottom: '1.5rem' }}>{error}</div>}
+      {/* Contenu & Liste d'Idées */}
+      {error && <div className="error-banner">{error}</div>}
 
-      {/* Grille des Idées */}
       {loading ? (
         <div className="ideas-grid">
           <div className="skeleton-card" />
@@ -207,56 +204,63 @@ export default function Ideas() {
           <div className="skeleton-card" />
         </div>
       ) : ideas.length === 0 ? (
-        <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '3.5rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-          <h3 style={{ color: '#111827', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
-            Aucune idée ne correspond à vos critères
-          </h3>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
-            Essayez de modifier votre recherche ou réinitialisez les filtres.
-          </p>
-          <button
-            onClick={() => { setSearch(''); setCategory('Toutes'); setSort('recent'); setStatus('all'); }}
-            className="btn-hero-primary"
-            style={{ textDecoration: 'none' }}
-          >
-            Réinitialiser les filtres
-          </button>
+        <div className="empty-state-box">
+          <div className="empty-icon">💡</div>
+          <h3>Aucune idée trouvée</h3>
+          <p>Soyez le premier à proposer une idée pour renforcer la probité et la transparence !</p>
+          {user ? (
+            <Link to="/submit-idea" className="btn-hero-primary" style={{ marginTop: '1rem', textDecoration: 'none', display: 'inline-block' }}>
+              + Proposer la première idée
+            </Link>
+          ) : (
+            <button onClick={() => triggerAuthPrompt('soumettre une idée')} className="btn-hero-primary" style={{ marginTop: '1rem' }}>
+              + Proposer la première idée
+            </button>
+          )}
         </div>
       ) : (
         <div className="ideas-grid">
-          {ideas.map((idea) => (
-            <div
-              key={idea._id}
-              className="idea-card clickable-idea-card"
-              onClick={() => navigate(`/ideas/${idea._id}`)}
-              title="Cliquer pour voir la fiche détaillée de l'idée"
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                  <span className="idea-badge">{idea.category}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                    {idea.createdAt ? new Date(idea.createdAt).toLocaleDateString('fr-FR') : 'Récemment'}
-                  </span>
-                </div>
-                <h3 className="idea-title">{idea.title}</h3>
-                <p className="idea-desc">{idea.description}</p>
-              </div>
+          {ideas.map((idea) => {
+            const hasVoted = user && Array.isArray(idea.votes) && idea.votes.includes(user.id);
 
-              <div className="idea-footer">
-                <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                  Par <strong>{getAuthorName(idea.author)}</strong>
-                </span>
-                <button
-                  className="vote-btn"
-                  onClick={(e) => handleVoteOptimistic(e, idea._id)}
-                  title={user ? t('action.vote') : t('guest.login_prompt')}
-                >
-                  👍 <span>{idea.voteCount || 0}</span>
-                </button>
+            return (
+              <div
+                key={idea._id}
+                className="idea-card"
+                onClick={() => navigate(`/ideas/${idea._id}`)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div>
+                  <div className="idea-card-header">
+                    <span className="idea-category-tag">{translateText(idea.category || 'Général')}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                      {new Date(idea.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
+                    </span>
+                  </div>
+
+                  <h3 className="idea-title">{translateText(idea.title)}</h3>
+                  <p className="idea-desc">{translateText(idea.description)}</p>
+                </div>
+
+                <div className="idea-card-footer" onClick={(e) => e.stopPropagation()}>
+                  <div className="author-info">
+                    <div className="author-avatar-small">
+                      {getAuthorName(idea.author).substring(0, 2).toUpperCase()}
+                    </div>
+                    <span className="author-name-text">{getAuthorName(idea.author)}</span>
+                  </div>
+
+                  <button
+                    onClick={(e) => handleVote(e, idea._id)}
+                    className={`btn-vote ${hasVoted ? 'voted' : ''}`}
+                    title={hasVoted ? 'Retirer mon vote' : 'Voter pour cette idée'}
+                  >
+                    👍 <strong>{idea.votesCount || idea.votes?.length || 0}</strong> {hasVoted ? t('action.voted') : t('action.vote')}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

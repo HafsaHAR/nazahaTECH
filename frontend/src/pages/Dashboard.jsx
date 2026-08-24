@@ -17,7 +17,7 @@ import './Dashboard.css';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { lang, t, translateText } = useLanguage();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
 
@@ -251,8 +251,6 @@ export default function Dashboard() {
         )}
       </div>
 
-
-
       {/* Module Admin (si connecté) */}
       {isAdmin && (
         <div className="admin-moderation-section">
@@ -284,13 +282,13 @@ export default function Dashboard() {
                     <div className="moderation-body">
                       <span className="moderation-badge pending">En attente</span>
                       <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '0.5rem' }}>
-                        Catégorie: <strong>{idea.category}</strong>
+                        Catégorie: <strong>{translateText(idea.category)}</strong>
                       </span>
-                      <h3 className="moderation-title">{idea.title}</h3>
-                      <p className="moderation-desc">{idea.description}</p>
+                      <h3 className="moderation-title">{translateText(idea.title)}</h3>
+                      <p className="moderation-desc">{translateText(idea.description)}</p>
                       <div className="moderation-meta">
                         <span>Par: <strong>{getAuthorName(idea.author)}</strong></span>
-                        <span>Date: {new Date(idea.createdAt).toLocaleDateString('fr-FR')}</span>
+                        <span>Date: {new Date(idea.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}</span>
                       </div>
                     </div>
 
@@ -316,8 +314,8 @@ export default function Dashboard() {
                     <span className={`moderation-badge ${idea.status || 'pending'}`}>
                       {idea.status === 'approved' ? 'Publiée' : 'En attente'}
                     </span>
-                    <h3 className="moderation-title">{idea.title}</h3>
-                    <p className="moderation-desc">{idea.description}</p>
+                    <h3 className="moderation-title">{translateText(idea.title)}</h3>
+                    <p className="moderation-desc">{translateText(idea.description)}</p>
                     <div className="moderation-meta">
                       <span>Par: <strong>{getAuthorName(idea.author)}</strong></span>
                       <span>Votes: {idea.voteCount || 0}</span>
@@ -334,8 +332,8 @@ export default function Dashboard() {
                 <div key={item._id} className="moderation-card" style={{ borderLeft: '4px solid #ef4444' }}>
                   <div className="moderation-body">
                     <span className="moderation-badge rejected">Supprimée & Archivée</span>
-                    <h3 className="moderation-title">{item.title}</h3>
-                    <p className="moderation-desc">{item.description}</p>
+                    <h3 className="moderation-title">{translateText(item.title)}</h3>
+                    <p className="moderation-desc">{translateText(item.description)}</p>
                   </div>
                 </div>
               ))}
@@ -348,7 +346,7 @@ export default function Dashboard() {
                 <div key={notif._id} className={`notification-item ${!notif.isRead ? 'unread' : ''}`}>
                   <div>
                     {!notif.isRead && <span className="unread-dot" />}
-                    <span>{notif.message}</span>
+                    <span>{translateText(notif.message)}</span>
                   </div>
                 </div>
               ))}
@@ -388,13 +386,13 @@ export default function Dashboard() {
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                    <span className="idea-badge">{idea.category}</span>
+                    <span className="idea-badge">{translateText(idea.category)}</span>
                     <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                      {idea.createdAt ? new Date(idea.createdAt).toLocaleDateString('fr-FR') : 'Récemment'}
+                      {idea.createdAt ? new Date(idea.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR') : 'Récemment'}
                     </span>
                   </div>
-                  <h3 className="idea-title">{idea.title}</h3>
-                  <p className="idea-desc">{idea.description}</p>
+                  <h3 className="idea-title">{translateText(idea.title)}</h3>
+                  <p className="idea-desc">{translateText(idea.description)}</p>
                 </div>
 
                 <div className="idea-footer">
