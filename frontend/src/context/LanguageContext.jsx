@@ -65,6 +65,21 @@ const translations = {
     'dashboard.trending_title': '⚡ Idées populaires',
     'dashboard.trending_sub': 'Les propositions les plus votées cette semaine',
 
+    // Admin Dashboard
+    'admin.dashboard_title': 'Tableau de bord & Modération Admin',
+    'admin.dashboard_sub': 'Supervisez les soumissions citoyennes en temps réel et gérez la modération.',
+    'admin.metric_pending': 'En attente de modération',
+    'admin.metric_approved': 'Idées approuvées',
+    'admin.metric_rejected': 'Idées rejetées',
+    'admin.metric_new24h': 'Nouvelles soumissions (24h)',
+    'admin.tab_pending': '⏳ Idées à modérer',
+    'admin.tab_published': '💡 Idées publiées',
+    'admin.tab_rejected': '📋 Historique des rejets',
+    'admin.tab_notifications': '🔔 Notifications',
+    'admin.btn_approve': '✓ Approuver',
+    'admin.btn_reject': '✕ Rejeter & Supprimer',
+    'admin.no_pending': 'Aucune idée en attente de modération pour le moment.',
+
     // Ideas Page
     'ideas.title': '💡 Galerie des idées citoyennes',
     'ideas.sub': 'Découvrez, filtrez et votez pour les propositions d\'innovation citoyenne.',
@@ -104,8 +119,17 @@ const translations = {
     'profile.sub': 'Gérez vos informations personnelles et consultez votre historique d\'activité.',
     'profile.tab_my_ideas': '💡 Mes Idées Soumises',
     'profile.tab_my_challenges': '🎯 Mes Soumissions aux Défis',
+    'profile.tab_my_comments': '💬 Mes Commentaires',
+    'profile.tab_my_bookmarks': '🏆 Défis Favoris',
     'profile.role_admin': 'Administrateur INPPLC',
     'profile.role_user': 'Citoyen / Participant',
+    'profile.personal_info': 'Informations Personnelles & Coordonnées',
+    'profile.email_label': 'Adresse Email (Identifiant)',
+    'profile.history_title': 'Historique de mes Contributions & Activités',
+    'profile.stat_ideas': '💡 Idées proposées',
+    'profile.stat_challenges': '🎯 Soumissions aux Défis',
+    'profile.stat_comments': '💬 Commentaires',
+    'profile.stat_bookmarks': '🏆 Défis favoris',
 
     // Submit Idea Page
     'submit.title': '💡 Proposer une Nouvelle Idée',
@@ -127,7 +151,7 @@ const translations = {
     'register.sub': 'Rejoignez la communauté d\'innovation pour la probité',
     'register.name': 'Nom complet',
     'register.first_name': 'Prénom',
-    'register.last_name': 'Nom',
+    'register.last_name': 'Nom de famille',
     'register.confirm_email': 'Confirmer l\'email',
     'register.phone': 'Numéro de téléphone',
     'register.password_ph': 'Au moins 6 caractères',
@@ -201,6 +225,21 @@ const translations = {
     'dashboard.trending_title': '⚡ Trending ideas',
     'dashboard.trending_sub': 'Most voted this week',
 
+    // Admin Dashboard
+    'admin.dashboard_title': 'Dashboard & Admin Moderation',
+    'admin.dashboard_sub': 'Supervise citizen submissions in real time and manage moderation.',
+    'admin.metric_pending': 'Pending Moderation',
+    'admin.metric_approved': 'Approved Ideas',
+    'admin.metric_rejected': 'Rejected Ideas',
+    'admin.metric_new24h': 'New Submissions (24h)',
+    'admin.tab_pending': '⏳ Ideas to Moderate',
+    'admin.tab_published': '💡 Published Ideas',
+    'admin.tab_rejected': '📋 Rejection History',
+    'admin.tab_notifications': '🔔 Notifications',
+    'admin.btn_approve': '✓ Approve',
+    'admin.btn_reject': '✕ Reject & Delete',
+    'admin.no_pending': 'No ideas pending moderation at the moment.',
+
     // Ideas Page
     'ideas.title': '💡 Citizen Ideas Gallery',
     'ideas.sub': 'Explore, filter and vote for citizen innovation proposals.',
@@ -240,8 +279,17 @@ const translations = {
     'profile.sub': 'Manage your personal details and view your activity history.',
     'profile.tab_my_ideas': '💡 My Submitted Ideas',
     'profile.tab_my_challenges': '🎯 My Challenge Submissions',
+    'profile.tab_my_comments': '💬 My Comments',
+    'profile.tab_my_bookmarks': '🏆 Favorite Challenges',
     'profile.role_admin': 'INPPLC Administrator',
     'profile.role_user': 'Citizen / Participant',
+    'profile.personal_info': 'Personal Details & Contact',
+    'profile.email_label': 'Email Address (ID)',
+    'profile.history_title': 'History of Contributions & Activities',
+    'profile.stat_ideas': '💡 Proposed Ideas',
+    'profile.stat_challenges': '🎯 Challenge Submissions',
+    'profile.stat_comments': '💬 Comments',
+    'profile.stat_bookmarks': '🏆 Favorite Challenges',
 
     // Submit Idea Page
     'submit.title': '💡 Submit a New Idea',
@@ -337,6 +385,21 @@ const translations = {
     'dashboard.trending_title': '⚡ أفكار رائجة',
     'dashboard.trending_sub': 'الأكثر تصويتاً هذا الأسبوع',
 
+    // Admin Dashboard
+    'admin.dashboard_title': 'لوحة القيادة ومراجعة المشرف',
+    'admin.dashboard_sub': 'إدارة ومراجعة مقترحات المواطنين في الوقت الفعلي.',
+    'admin.metric_pending': 'قيد المراجعة',
+    'admin.metric_approved': 'أفكار معتمدة',
+    'admin.metric_rejected': 'أفكار مرفوضة',
+    'admin.metric_new24h': 'مقترحات جديدة (24س)',
+    'admin.tab_pending': '⏳ أفكار قيد المراجعة',
+    'admin.tab_published': '💡 أفكار منشورة',
+    'admin.tab_rejected': '📋 سجل الرفض',
+    'admin.tab_notifications': '🔔 التنبيهات',
+    'admin.btn_approve': '✓ موافقة واعتماد',
+    'admin.btn_reject': '✕ رفض وحذف',
+    'admin.no_pending': 'لا توجد أفكار قيد المراجعة حالياً.',
+
     // Ideas Page
     'ideas.title': '💡 معرض الأفكار المواطنة',
     'ideas.sub': 'استكشف، تصفح وصوت على مقترحات الابتكار المواطنة.',
@@ -376,8 +439,17 @@ const translations = {
     'profile.sub': 'إدارة معلوماتك الشخصية والاطلاع على سجل أنشطتك.',
     'profile.tab_my_ideas': '💡 الأفكار المقترحة',
     'profile.tab_my_challenges': '🎯 مشاركاتي في التحديات',
+    'profile.tab_my_comments': '💬 تعليقاتي',
+    'profile.tab_my_bookmarks': '🏆 التحديات المفضلة',
     'profile.role_admin': 'مشرف الهيئة الوطنية',
     'profile.role_user': 'مواطن / مشارك',
+    'profile.personal_info': 'المعلومات الشخصية والاتصال',
+    'profile.email_label': 'البريد الإلكتروني (المعرف)',
+    'profile.history_title': 'سجل المساهمات والأنشطة',
+    'profile.stat_ideas': '💡 أفكار مقترحة',
+    'profile.stat_challenges': '🎯 المشاركات في التحديات',
+    'profile.stat_comments': '💬 تعليقات',
+    'profile.stat_bookmarks': '🏆 التحديات المفضلة',
 
     // Submit Idea Page
     'submit.title': '💡 إقتراح فكرة جديدة',

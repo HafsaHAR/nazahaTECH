@@ -122,28 +122,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleMarkRead = async (id) => {
-    try {
-      await markNotificationReadApi(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
-      console.error('Erreur lecture notification :', err);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await markAllNotificationsReadApi();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      console.error('Erreur tout marquer lu :', err);
-    }
-  };
-
   const getAuthorName = (author) => {
     if (!author) return 'Citoyen INPPLC';
     if (typeof author === 'object') {
@@ -171,12 +149,10 @@ export default function Dashboard() {
           <span>✨</span> {t('dashboard.badge')}
         </div>
         <h1 className="dashboard-hero-title">
-          {isAdmin ? 'Tableau de bord & Modération Admin' : t('dashboard.hero_title')}
+          {isAdmin ? t('admin.dashboard_title') : t('dashboard.hero_title')}
         </h1>
         <p className="dashboard-hero-sub">
-          {isAdmin
-            ? 'Supervisez les soumissions citoyennes en temps réel et gérez la modération.'
-            : t('dashboard.hero_sub')}
+          {isAdmin ? t('admin.dashboard_sub') : t('dashboard.hero_sub')}
         </p>
         <div className="hero-buttons">
           {user ? (
@@ -194,32 +170,32 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Cartes Métriques Publiques */}
+      {/* Cartes Métriques Publiques & Admin */}
       <div className="metrics-grid">
         {isAdmin ? (
           <>
             <div className="metric-card pending">
               <div className="metric-icon-wrapper" style={{ backgroundColor: '#fef3c7', color: '#b45309', borderColor: '#fde68a' }}>⏳</div>
               <div className="metric-value">{metrics?.statusCounts?.pending ?? pendingIdeas.length}</div>
-              <div className="metric-label">En attente de modération</div>
+              <div className="metric-label">{t('admin.metric_pending')}</div>
             </div>
 
             <div className="metric-card approved">
               <div className="metric-icon-wrapper" style={{ backgroundColor: '#dcfce7', color: '#15803d', borderColor: '#bbf7d0' }}>✅</div>
               <div className="metric-value">{metrics?.statusCounts?.approved ?? ideas.filter(i => i.status === 'approved').length}</div>
-              <div className="metric-label">Idées approuvées</div>
+              <div className="metric-label">{t('admin.metric_approved')}</div>
             </div>
 
             <div className="metric-card rejected">
               <div className="metric-icon-wrapper" style={{ backgroundColor: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5' }}>🚫</div>
               <div className="metric-value">{metrics?.statusCounts?.rejected ?? rejectedHistory.length}</div>
-              <div className="metric-label">Idées rejetées</div>
+              <div className="metric-label">{t('admin.metric_rejected')}</div>
             </div>
 
             <div className="metric-card">
               <div className="metric-icon-wrapper">✨</div>
               <div className="metric-value">{metrics?.newIdeas24h ?? 0}</div>
-              <div className="metric-label">Nouvelles soumissions (24h)</div>
+              <div className="metric-label">{t('admin.metric_new24h')}</div>
             </div>
           </>
         ) : (
@@ -256,16 +232,16 @@ export default function Dashboard() {
         <div className="admin-moderation-section">
           <div className="moderation-tabs">
             <button className={`tab-btn ${adminTab === 'pending_ideas' ? 'active' : ''}`} onClick={() => setAdminTab('pending_ideas')}>
-              ⏳ Idées à modérer ({pendingIdeas.length})
+              {t('admin.tab_pending')} ({pendingIdeas.length})
             </button>
             <button className={`tab-btn ${adminTab === 'all_ideas' ? 'active' : ''}`} onClick={() => setAdminTab('all_ideas')}>
-              💡 Idées publiées ({ideas.length})
+              {t('admin.tab_published')} ({ideas.length})
             </button>
             <button className={`tab-btn ${adminTab === 'history' ? 'active' : ''}`} onClick={() => setAdminTab('history')}>
-              📋 Historique des rejets ({rejectedHistory.length})
+              {t('admin.tab_rejected')} ({rejectedHistory.length})
             </button>
             <button className={`tab-btn ${adminTab === 'notifications' ? 'active' : ''}`} onClick={() => setAdminTab('notifications')}>
-              🔔 Notifications {unreadCount > 0 && <span style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', marginLeft: '0.35rem' }}>{unreadCount}</span>}
+              {t('admin.tab_notifications')} {unreadCount > 0 && <span style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', marginLeft: '0.35rem' }}>{unreadCount}</span>}
             </button>
           </div>
 
@@ -274,15 +250,15 @@ export default function Dashboard() {
               {pendingIdeas.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
                   <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎉</div>
-                  <p>Aucune idée en attente de modération pour le moment.</p>
+                  <p>{t('admin.no_pending')}</p>
                 </div>
               ) : (
                 pendingIdeas.map((idea) => (
                   <div key={idea._id} className="moderation-card">
                     <div className="moderation-body">
-                      <span className="moderation-badge pending">En attente</span>
+                      <span className="moderation-badge pending">{translateText('En modération')}</span>
                       <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '0.5rem' }}>
-                        Catégorie: <strong>{translateText(idea.category)}</strong>
+                        {t('meta.category')}: <strong>{translateText(idea.category)}</strong>
                       </span>
                       <h3 className="moderation-title">{translateText(idea.title)}</h3>
                       <p className="moderation-desc">{translateText(idea.description)}</p>
@@ -294,10 +270,10 @@ export default function Dashboard() {
 
                     <div className="moderation-actions">
                       <button onClick={() => handleApproveIdea(idea._id)} className="btn-approve">
-                        ✓ Approuver
+                        {t('admin.btn_approve')}
                       </button>
                       <button onClick={() => handleRejectIdea(idea._id)} className="btn-reject">
-                        ✕ Rejeter & Supprimer
+                        {t('admin.btn_reject')}
                       </button>
                     </div>
                   </div>
@@ -312,7 +288,7 @@ export default function Dashboard() {
                 <div key={idea._id} className="moderation-card">
                   <div className="moderation-body">
                     <span className={`moderation-badge ${idea.status || 'pending'}`}>
-                      {idea.status === 'approved' ? 'Publiée' : 'En attente'}
+                      {idea.status === 'approved' ? translateText('Publiées') : translateText('En modération')}
                     </span>
                     <h3 className="moderation-title">{translateText(idea.title)}</h3>
                     <p className="moderation-desc">{translateText(idea.description)}</p>
@@ -331,7 +307,7 @@ export default function Dashboard() {
               {rejectedHistory.map((item) => (
                 <div key={item._id} className="moderation-card" style={{ borderLeft: '4px solid #ef4444' }}>
                   <div className="moderation-body">
-                    <span className="moderation-badge rejected">Supprimée & Archivée</span>
+                    <span className="moderation-badge rejected">Supprimée</span>
                     <h3 className="moderation-title">{translateText(item.title)}</h3>
                     <p className="moderation-desc">{translateText(item.description)}</p>
                   </div>

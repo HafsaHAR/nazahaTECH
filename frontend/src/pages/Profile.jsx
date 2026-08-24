@@ -15,7 +15,7 @@ import './Profile.css';
 export default function Profile() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { lang, t, translateText } = useLanguage();
 
   // États pour la mise à jour des informations personnelles
   const [firstName, setFirstName] = useState('');
@@ -183,22 +183,22 @@ export default function Profile() {
         <div className="profile-stats-grid">
           <div className="profile-stat-box">
             <span className="stat-number">{summary.ideasCount}</span>
-            <span className="stat-label">💡 Idées proposées</span>
+            <span className="stat-label">{t('profile.stat_ideas')}</span>
           </div>
 
           <div className="profile-stat-box">
             <span className="stat-number">{challengeSubmissions.length}</span>
-            <span className="stat-label">🎯 Soumissions aux Défis</span>
+            <span className="stat-label">{t('profile.stat_challenges')}</span>
           </div>
 
           <div className="profile-stat-box">
             <span className="stat-number">{summary.commentsCount}</span>
-            <span className="stat-label">💬 Commentaires</span>
+            <span className="stat-label">{t('profile.stat_comments')}</span>
           </div>
 
           <div className="profile-stat-box">
             <span className="stat-number">{summary.challengesCount}</span>
-            <span className="stat-label">🏆 Défis favoris</span>
+            <span className="stat-label">{t('profile.stat_bookmarks')}</span>
           </div>
         </div>
       </div>
@@ -206,7 +206,7 @@ export default function Profile() {
       {/* Formulaire d'Édition du Profil */}
       <div className="profile-section-card">
         <h2 className="section-card-title">
-          <span>⚙️</span> Informatiques Personnelles & Coordonnées
+          <span>⚙️</span> {t('profile.personal_info')}
         </h2>
 
         {updateMsg && <div className="alert-success" style={{ marginBottom: '1.25rem' }}>{updateMsg}</div>}
@@ -214,7 +214,7 @@ export default function Profile() {
 
         <form onSubmit={handleUpdateProfile} className="profile-form-grid">
           <div className="form-group-custom">
-            <label>Prénom</label>
+            <label>{t('register.first_name')}</label>
             <input
               type="text"
               placeholder="Votre prénom"
@@ -224,7 +224,7 @@ export default function Profile() {
           </div>
 
           <div className="form-group-custom">
-            <label>Nom de famille</label>
+            <label>{t('register.last_name')}</label>
             <input
               type="text"
               placeholder="Votre nom"
@@ -234,7 +234,7 @@ export default function Profile() {
           </div>
 
           <div className="form-group-custom">
-            <label>Numéro de Téléphone</label>
+            <label>{t('register.phone')}</label>
             <input
               type="tel"
               placeholder="+212 6 00 00 00 00"
@@ -244,7 +244,7 @@ export default function Profile() {
           </div>
 
           <div className="form-group-custom">
-            <label>Adresse Email (Identifiant)</label>
+            <label>{t('profile.email_label')}</label>
             <input
               type="email"
               disabled
@@ -269,7 +269,7 @@ export default function Profile() {
       {/* Historique d'Activité */}
       <div className="profile-section-card">
         <h2 className="section-card-title">
-          <span>📊</span> Historique de mes Contributions & Activités
+          <span>📊</span> {t('profile.history_title')}
         </h2>
 
         {/* Onglets d'activité */}
@@ -290,13 +290,13 @@ export default function Profile() {
             className={`activity-tab-btn ${activeTab === 'comments' ? 'active' : ''}`}
             onClick={() => { setActiveTab('comments'); setPage(1); }}
           >
-            💬 Mes Commentaires ({summary.commentsCount})
+            {t('profile.tab_my_comments')} ({summary.commentsCount})
           </button>
           <button
             className={`activity-tab-btn ${activeTab === 'challenges' ? 'active' : ''}`}
             onClick={() => { setActiveTab('challenges'); setPage(1); }}
           >
-            🏆 Défis Favoris ({summary.challengesCount})
+            {t('profile.tab_my_bookmarks')} ({summary.challengesCount})
           </button>
         </div>
 
@@ -318,7 +318,7 @@ export default function Profile() {
                   <div key={sub._id} className="activity-item-card" onClick={() => navigate(`/ideas/${sub._id}`)} style={{ cursor: 'pointer' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <span className="category-tag" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontWeight: 700 }}>
-                        🏆 Défi : {sub.challengeTitle || sub.challengeId?.title || 'Défi INPPLC'}
+                        🏆 Défi : {translateText(sub.challengeTitle || sub.challengeId?.title || 'Défi INPPLC')}
                       </span>
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: sub.status === 'approved' ? '#15803d' : '#b45309', backgroundColor: sub.status === 'approved' ? '#dcfce7' : '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '6px' }}>
                         {sub.status === 'approved' ? '🟢 Approuvé' : '⏳ En cours d\'examen'}
@@ -326,14 +326,14 @@ export default function Profile() {
                     </div>
 
                     <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827', marginBottom: '0.35rem' }}>
-                      {sub.title}
+                      {translateText(sub.title)}
                     </h4>
                     <p style={{ fontSize: '0.875rem', color: '#4b5563', lineHeight: 1.5, marginBottom: '0.75rem' }}>
-                      {sub.description}
+                      {translateText(sub.description)}
                     </p>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.775rem', color: '#9ca3af' }}>
-                      <span>Déposé le {new Date(sub.createdAt).toLocaleDateString('fr-FR')}</span>
+                      <span>Déposé le {new Date(sub.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}</span>
                       <span style={{ color: 'var(--primary-green)', fontWeight: 700 }}>Voir la soumission →</span>
                     </div>
                   </div>
@@ -358,11 +358,11 @@ export default function Profile() {
                 {tabData.map((item) => (
                   <div key={item._id} className="activity-item-card" onClick={() => item.title && navigate(activeTab === 'challenges' ? `/challenges/${item._id}` : `/ideas/${item._id || item.idea}`)} style={{ cursor: 'pointer' }}>
                     <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', marginBottom: '0.35rem' }}>
-                      {item.title || item.content || 'Contribution'}
+                      {translateText(item.title || item.content || 'Contribution')}
                     </h4>
-                    {item.description && <p style={{ fontSize: '0.85rem', color: '#4b5563' }}>{item.description}</p>}
+                    {item.description && <p style={{ fontSize: '0.85rem', color: '#4b5563' }}>{translateText(item.description)}</p>}
                     <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                      {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+                      {new Date(item.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
                     </div>
                   </div>
                 ))}
