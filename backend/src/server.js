@@ -7,6 +7,7 @@ const { runSeedIfEmpty } = require('./config/seedUsers');
 const { runSeedChallengesIfEmpty } = require('./config/seedChallenges');
 const { runSeedDocumentsIfEmpty } = require('./config/seedDocuments');
 const { runSeedInitiativesIfEmpty } = require('./config/seedInitiatives');
+const { runSeedIdeasIfEmpty } = require('./config/seedIdeas');
 
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -18,6 +19,7 @@ const commentRoutes = require('./routes/commentRoutes');
 const challengeRoutes = require('./routes/challengeRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const initiativeRoutes = require('./routes/initiativeRoutes');
+const challengeSubmissionRoutes = require('./routes/challengeSubmissionRoutes');
 
 dotenv.config();
 
@@ -55,12 +57,13 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/initiatives', initiativeRoutes);
+app.use('/api', challengeSubmissionRoutes);
 
 app.get('/', (req, res) => {
-  res.send('API NazahaTECH v2.2 (Téléversement de fichiers de la Bibliothèque) opérationnelle');
+  res.send('API NazahaTECH v2.5 (Modèles d\'idées et de soumissions de défis strictement séparés) opérationnelle');
 });
 
-// Middleware d'erreur global Express (garantit un retour JSON propre au lieu d'HTML)
+// Middleware d'erreur global Express
 app.use((err, req, res, next) => {
   console.error('Erreur serveur Express :', err.message);
   return res.status(err.status || 500).json({
@@ -76,6 +79,7 @@ const startServer = async () => {
   await runSeedChallengesIfEmpty();
   await runSeedDocumentsIfEmpty();
   await runSeedInitiativesIfEmpty();
+  await runSeedIdeasIfEmpty();
   app.listen(PORT, () => {
     console.log(`Serveur NazahaTECH démarré sur le port ${PORT}`);
   });

@@ -4,6 +4,7 @@ import { getIdeasApi, voteIdeaApi } from '../api/ideaApi';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import AuthPromptModal from '../components/AuthPromptModal';
+import { exportPDFReport, exportCSVReport } from '../utils/reportExporter';
 import './Ideas.css';
 import './Challenges.css';
 import './Dashboard.css';
@@ -85,6 +86,40 @@ export default function Ideas() {
     }
   };
 
+  const handleExportPDF = () => {
+    const columns = [
+      { header: 'Titre de la Proposition', accessor: (row) => row.title },
+      { header: 'Catégorie', accessor: (row) => row.category || 'Général' },
+      { header: 'Votes', accessor: (row) => row.voteCount || row.votesCount || 0 },
+      { header: 'Date', accessor: (row) => new Date(row.createdAt).toLocaleDateString('fr-FR') }
+    ];
+
+    exportPDFReport({
+      title: '🇲🇦 Galerie des Idées Citoyennes — Rapport Officiel INPPLC',
+      subtitle: 'Liste filtrée des propositions d\'innovation enregistrées sur NazahaTECH.',
+      data: ideas,
+      columns,
+      lang,
+      translateText
+    });
+  };
+
+  const handleExportCSV = () => {
+    const columns = [
+      { header: 'Titre', accessor: (row) => row.title },
+      { header: 'Description', accessor: (row) => row.description },
+      { header: 'Categorie', accessor: (row) => row.category },
+      { header: 'Votes', accessor: (row) => row.voteCount || row.votesCount || 0 }
+    ];
+
+    exportCSVReport({
+      filename: 'Galerie_Idees_INPPLC',
+      data: ideas,
+      columns,
+      translateText
+    });
+  };
+
   const getAuthorName = (author) => {
     if (!author) return 'Citoyen Anonyme';
     if (typeof author === 'object') {
@@ -99,43 +134,62 @@ export default function Ideas() {
     return author;
   };
 
+  const getCategoryClass = (cat) => {
+    if (!cat) return 'cat-default';
+    const clean = cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (clean.includes('prevention')) return 'cat-prevention';
+    if (clean.includes('transparence')) return 'cat-transparence';
+    if (clean.includes('digital')) return 'cat-digital';
+    if (clean.includes('education')) return 'cat-education';
+    return 'cat-default';
+  };
+
   return (
     <div className="ideas-page-container">
-      {/* Fenêtre Modale d'invitation à la connexion pour les visiteurs */}
+      {/* Modale d'invitation d'authentification */}
       <AuthPromptModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         actionName={modalActionName}
       />
 
-      {/* En-tête de la Galerie */}
-      <div className="section-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* En-tête Moderne de la Galerie */}
+      <div className="ideas-header-banner">
         <div>
-          <h1 className="section-title" style={{ fontSize: '1.85rem' }}>
-            {t('ideas.title')}
+          <h1 className="section-title">
+            <span>💡</span> {t('ideas.title')}
           </h1>
           <p className="section-subtitle">
             {t('ideas.sub')}
           </p>
         </div>
 
-        {user ? (
-          <Link to="/submit-idea" className="btn-hero-primary" style={{ textDecoration: 'none' }}>
-            + {t('nav.new_idea')}
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => triggerAuthPrompt('soumettre une nouvelle idée')}
-            className="btn-hero-primary"
-            style={{ textDecoration: 'none' }}
-          >
-            + {t('nav.new_idea')}
+        <div className="ideas-actions-group">
+          <button onClick={handleExportPDF} className="btn-export-badge" title="Exporter au format PDF imprimable">
+            📄 PDF
           </button>
-        )}
+          <button onClick={handleExportCSV} className="btn-export-badge" title="Exporter en fichier Excel/CSV">
+            📊 CSV
+          </button>
+
+          {user ? (
+            <Link to="/submit-idea" className="btn-hero-primary" style={{ textDecoration: 'none' }}>
+              + {t('nav.new_idea')}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => triggerAuthPrompt('soumettre une nouvelle idée')}
+              className="btn-hero-primary"
+              style={{ textDecoration: 'none' }}
+            >
+              + {t('nav.new_idea')}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Barre de Filtrage */}
+      {/* Barre de Filtrage Moderne */}
       <div className="challenges-filter-panel">
         <div className="status-tabs-row">
           <button
@@ -194,7 +248,7 @@ export default function Ideas() {
         </div>
       </div>
 
-      {/* Contenu & Liste d'Idées */}
+      {/* Affichage de la Liste des Idées */}
       {error && <div className="error-banner">{error}</div>}
 
       {loading ? (
@@ -221,20 +275,22 @@ export default function Ideas() {
       ) : (
         <div className="ideas-grid">
           {ideas.map((idea) => {
-            const hasVoted = user && Array.isArray(idea.votes) && idea.votes.includes(user.id);
+            const hasVoted = user && Array.isArray(idea.voters) && idea.voters.includes(user.id);
+            const votesDisplay = idea.voteCount !== undefined ? idea.voteCount : (idea.voters?.length || 0);
 
             return (
               <div
                 key={idea._id}
                 className="idea-card"
                 onClick={() => navigate(`/ideas/${idea._id}`)}
-                style={{ cursor: 'pointer' }}
               >
                 <div>
                   <div className="idea-card-header">
-                    <span className="idea-category-tag">{translateText(idea.category || 'Général')}</span>
-                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                      {new Date(idea.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
+                    <span className={`idea-category-tag ${getCategoryClass(idea.category)}`}>
+                      🏷️ {translateText(idea.category || 'Général')}
+                    </span>
+                    <span className="idea-date-text">
+                      📅 {new Date(idea.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
                     </span>
                   </div>
 
@@ -255,7 +311,7 @@ export default function Ideas() {
                     className={`btn-vote ${hasVoted ? 'voted' : ''}`}
                     title={hasVoted ? 'Retirer mon vote' : 'Voter pour cette idée'}
                   >
-                    👍 <strong>{idea.votesCount || idea.votes?.length || 0}</strong> {hasVoted ? t('action.voted') : t('action.vote')}
+                    👍 <strong>{votesDisplay}</strong> {hasVoted ? t('action.voted') : t('action.vote')}
                   </button>
                 </div>
               </div>

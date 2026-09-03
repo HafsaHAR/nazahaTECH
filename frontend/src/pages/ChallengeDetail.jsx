@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getChallengeByIdApi, toggleBookmarkApi, getChallengeSubmissionsApi } from '../api/challengeApi';
+import { getChallengeByIdApi, toggleBookmarkApi } from '../api/challengeApi';
+import { getChallengeSubmissionsApi, updateChallengeSubmissionStatusApi } from '../api/challengeSubmissionApi';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import './ChallengeDetail.css';
@@ -10,7 +11,7 @@ export default function ChallengeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, translateText } = useLanguage();
   const isAdmin = user?.role === 'admin';
 
   const [challenge, setChallenge] = useState(null);
@@ -21,6 +22,7 @@ export default function ChallengeDetail() {
   // États pour les soumissions spécifiques au défi (Vue Admin)
   const [submissions, setSubmissions] = useState([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [updatingId, setUpdatingId] = useState(null);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -65,6 +67,18 @@ export default function ChallengeDetail() {
     }
   };
 
+  const handleUpdateStatus = async (subId, newStatus) => {
+    try {
+      setUpdatingId(subId);
+      await updateChallengeSubmissionStatusApi(subId, { status: newStatus });
+      fetchSubmissions();
+    } catch (err) {
+      alert('Erreur lors de la mise à jour du statut.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleToggleBookmarkOptimistic = async () => {
     if (!user) {
       navigate('/login');
@@ -90,7 +104,7 @@ export default function ChallengeDetail() {
       navigate('/login');
       return;
     }
-    navigate(`/submit-idea?challenge=${challenge._id}`);
+    navigate(`/submit-challenge?challengeId=${challenge._id}`);
   };
 
   if (loading) {
@@ -130,6 +144,12 @@ export default function ChallengeDetail() {
       ? '🟢 Actif & Ouvert'
       : '🔴 Clôturé';
 
+  const getCandidateName = (u) => {
+    if (!u) return 'Candidat Anonyme';
+    if (u.firstName && u.lastName) return `${u.firstName} ${u.lastName}`;
+    return u.email || 'Candidat NazahaTECH';
+  };
+
   return (
     <div className="challenge-detail-container">
       <button onClick={() => navigate('/challenges')} className="btn-back">
@@ -142,7 +162,7 @@ export default function ChallengeDetail() {
             <span className={`challenge-status-badge ${challenge.computedStatus || 'open'}`}>
               {statusLabel}
             </span>
-            <span className="category-tag">{challenge.category}</span>
+            <span className="category-tag">{translateText(challenge.category)}</span>
             <span className="location-badge">
               {challenge.locationMode === 'onsite' ? `📍 ${challenge.locationAddress || 'Présentiel'}` : '💻 À distance'}
             </span>
@@ -153,8 +173,8 @@ export default function ChallengeDetail() {
           </span>
         </div>
 
-        <h1 className="challenge-detail-title">{challenge.title}</h1>
-        <p className="challenge-detail-desc">{challenge.description}</p>
+        <h1 className="challenge-detail-title">{translateText(challenge.title)}</h1>
+        <p className="challenge-detail-desc">{translateText(challenge.description)}</p>
 
         <div className="dates-breakdown-card">
           <div className="date-item">
@@ -224,21 +244,21 @@ export default function ChallengeDetail() {
         </div>
       </div>
 
-      {/* Section Réservée à l'Admin : Consultation des Soumissions des Participants pour ce Défi */}
+      {/* Section Réservée à l'Admin : Consultation et Évaluation des Soumissions au Défi */}
       {isAdmin && (
         <div style={{ marginTop: '2rem', backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '18px', padding: '1.75rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#111827', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             🎯 Soumissions des Participants ({submissions.length}) — Espace Admin
           </h2>
           <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1.25rem' }}>
-            Consultez toutes les idées soumises par les candidats pour ce défi spécifique. Ces idées sont isolées de la galerie d'idées publiques.
+            Ces propositions sont stockées spécifiquement dans la BDD `ChallengeSubmission` et isolées de la galerie d'idées citoyennes.
           </p>
 
           {loadingSubmissions ? (
             <div style={{ padding: '1.5rem', textAlign: 'center', color: '#6b7280' }}>Chargement des soumissions au défi...</div>
           ) : submissions.length === 0 ? (
             <div style={{ padding: '1.5rem', backgroundColor: '#f9fafb', borderRadius: '12px', textAlign: 'center', color: '#6b7280', fontSize: '0.9rem' }}>
-              Aucun participant n'a encore soumis d'idée pour ce défi.
+              Aucun participant n'a encore soumis de solution pour ce défi.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -246,7 +266,7 @@ export default function ChallengeDetail() {
                 <div
                   key={sub._id}
                   className="moderation-card"
-                  style={{ borderLeft: '4px solid var(--primary-green)', padding: '1.25rem' }}
+                  style={{ borderLeft: sub.status === 'accepted' ? '4px solid #15803d' : sub.status === 'rejected' ? '4px solid #dc2626' : '4px solid #d97706', padding: '1.25rem' }}
                 >
                   <div className="moderation-body">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -254,21 +274,56 @@ export default function ChallengeDetail() {
                         Soumission #{index + 1}
                       </span>
                       <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                        Date : {new Date(sub.createdAt).toLocaleDateString('fr-FR')}
+                        Déposée le {new Date(sub.createdAt).toLocaleDateString('fr-FR')}
                       </span>
                     </div>
 
                     <h3 className="moderation-title" style={{ fontSize: '1.1rem', marginBottom: '0.35rem' }}>
-                      {sub.submittedIdea?.title || 'Idée transmise au défi'}
+                      {sub.title}
                     </h3>
                     <p className="moderation-desc" style={{ fontSize: '0.9rem', marginBottom: '0.75rem' }}>
-                      {sub.submittedIdea?.description || 'Description de la soumission'}
+                      {sub.description}
                     </p>
 
+                    {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
+                      <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {sub.attachments.map((att, aIdx) => (
+                          <a
+                            key={aIdx}
+                            href={att.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: '0.775rem', fontWeight: 700, backgroundColor: '#f3f4f6', color: '#111827', padding: '0.25rem 0.65rem', borderRadius: '6px', textDecoration: 'none' }}
+                          >
+                            📎 {att.fileName} ({att.fileSize})
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="moderation-meta">
-                      <span>Candidat : <strong>{sub.participant?.name}</strong> ({sub.participant?.email})</span>
-                      <span>Statut : <strong style={{ color: sub.status === 'approved' ? '#15803d' : '#b45309' }}>{sub.status === 'approved' ? '🟢 Approuvé' : '⏳ En cours d\'examen'}</strong></span>
+                      <span>Candidat : <strong>{getCandidateName(sub.userId)}</strong> ({sub.userId?.email})</span>
+                      <span>Statut BDD : <strong style={{ color: sub.status === 'accepted' ? '#15803d' : sub.status === 'rejected' ? '#b91c1c' : '#b45309' }}>
+                        {sub.status === 'accepted' ? '🟢 Acceptée' : sub.status === 'rejected' ? '🔴 Rejetée' : '⏳ En modération'}
+                      </strong></span>
                     </div>
+                  </div>
+
+                  <div className="moderation-actions">
+                    <button
+                      onClick={() => handleUpdateStatus(sub._id, 'accepted')}
+                      disabled={updatingId === sub._id}
+                      className="btn-approve"
+                    >
+                      {updatingId === sub._id ? '⏳...' : '✓ Accepter'}
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(sub._id, 'rejected')}
+                      disabled={updatingId === sub._id}
+                      className="btn-reject"
+                    >
+                      {updatingId === sub._id ? '⏳...' : '✕ Rejeter'}
+                    </button>
                   </div>
                 </div>
               ))}

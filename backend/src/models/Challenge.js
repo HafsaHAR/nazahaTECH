@@ -86,6 +86,11 @@ const challengeSchema = new mongoose.Schema(
       type: String,
       default: 'INPPLC'
     },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true
+    },
     extraFields: [extraFieldSchema]
   },
   {

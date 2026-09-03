@@ -114,11 +114,12 @@ const createChallenge = async (req, res) => {
       locationAddress: locationAddress ? locationAddress.trim() : '',
       maxParticipants: maxParticipants ? parseInt(maxParticipants, 10) : 100,
       organization: organization ? organization.trim() : 'INPPLC',
+      createdBy: req.user._id,
       extraFields: processedExtraFields
     });
 
     return res.status(201).json({
-      message: 'Challenge created successfully.',
+      message: 'Défi créé avec succès et enregistré dans la base de données.',
       challenge: formatChallenge(challenge)
     });
 
@@ -132,9 +133,9 @@ const createChallenge = async (req, res) => {
 };
 
 /**
- * @desc    Toggle Bookmark / Save Challenge for user (Single Source of Truth in User.savedChallenges)
+ * @desc    Toggle Bookmark Challenge (Favorite)
  * @route   POST /api/challenges/:id/bookmark
- * @access  Private (JWT required)
+ * @access  Private
  */
 const toggleBookmark = async (req, res) => {
   try {
@@ -142,7 +143,7 @@ const toggleBookmark = async (req, res) => {
     const userId = req.user._id;
 
     if (!mongoose.Types.ObjectId.isValid(challengeId)) {
-      return res.status(400).json({ message: 'Invalid Challenge ID.' });
+      return res.status(400).json({ message: 'Invalid challenge ID.' });
     }
 
     const challenge = await Challenge.findById(challengeId);
@@ -151,201 +152,136 @@ const toggleBookmark = async (req, res) => {
     }
 
     const user = await User.findById(userId);
-    const savedArray = user.savedChallenges || [];
-
-    const isCurrentlySaved = savedArray.some(
-      (savedId) => savedId.toString() === challengeId.toString()
+    const isSaved = user.savedChallenges.some(
+      (id) => id.toString() === challengeId
     );
 
-    if (isCurrentlySaved) {
-      await User.findByIdAndUpdate(userId, {
-        $pull: { savedChallenges: challengeId }
-      });
+    if (isSaved) {
+      user.savedChallenges = user.savedChallenges.filter(
+        (id) => id.toString() !== challengeId
+      );
     } else {
-      await User.findByIdAndUpdate(userId, {
-        $addToSet: { savedChallenges: challengeId }
-      });
+      user.savedChallenges.push(challengeId);
     }
 
-    const updatedUser = await User.findById(userId);
-    const isSavedNow = updatedUser.savedChallenges.some(
-      (savedId) => savedId.toString() === challengeId.toString()
-    );
+    await user.save();
 
     return res.status(200).json({
-      message: isSavedNow ? 'Challenge saved to your bookmarks.' : 'Challenge removed from your bookmarks.',
-      isSaved: isSavedNow
+      message: isSaved ? 'Défi retiré des favoris.' : 'Défi sauvegardé dans vos favoris.',
+      isSaved: !isSaved
     });
 
   } catch (error) {
     console.error('Error toggling bookmark:', error);
-    return res.status(500).json({
-      message: 'Server error while toggling bookmark.',
-      error: error.message
-    });
+    return res.status(500).json({ message: 'Server error while toggling bookmark.' });
   }
 };
 
 /**
- * @desc    Get filtered, sorted, and paginated challenges
- * @route   GET /api/challenges?search=&status=&sort=&category=&page=&limit=
- * @access  Public
+ * @desc    Get all challenges with multi-criteria filtering
+ * @route   GET /api/challenges
+ * @access  Public (Optional auth for isSaved status)
  */
 const getChallenges = async (req, res) => {
   try {
-    const {
-      search = '',
-      status = 'all',
-      sort = 'recent',
-      category = 'Toutes',
-      page = 1,
-      limit = 10
-    } = req.query;
-
-    const filter = {};
-
-    if (status && status !== 'all') {
-      if (status === 'open') {
-        filter.status = { $in: ['open', 'OUVERT', 'OPEN'] };
-      } else if (status === 'in_progress') {
-        filter.status = { $in: ['in_progress', 'EN_COURS'] };
-      } else if (status === 'closed') {
-        filter.status = { $in: ['closed', 'CLOTURE', 'CLOSED'] };
-      } else {
-        filter.status = status;
-      }
-    }
+    const { status, search, category, sort } = req.query;
+    const query = {};
 
     if (category && category !== 'Toutes' && category !== 'All') {
-      filter.category = category;
+      query.category = category;
     }
 
     if (search && search.trim() !== '') {
       const searchTerm = search.trim();
-      filter.$or = [
+      query.$or = [
         { title: { $regex: searchTerm, $options: 'i' } },
         { description: { $regex: searchTerm, $options: 'i' } }
       ];
     }
 
-    let sortOptions = { createdAt: -1 };
+    let sortOptions = { startDate: -1 };
     if (sort === 'popular') {
-      sortOptions = { participantsCount: -1, createdAt: -1 };
+      sortOptions = { participantsCount: -1, startDate: -1 };
     } else if (sort === 'ending_soon') {
-      sortOptions = { deadline: 1 };
+      sortOptions = { endDate: 1 };
     } else if (sort === 'recent') {
       sortOptions = { createdAt: -1 };
     }
 
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.max(1, parseInt(limit, 10) || 10);
-    const skip = (pageNum - 1) * limitNum;
+    const challengesDoc = await Challenge.find(query).sort(sortOptions);
 
-    const total = await Challenge.countDocuments(filter);
-    const challenges = await Challenge.find(filter)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limitNum);
-
-    // If user is authenticated, compute isSaved dynamically
     let savedChallengesArray = [];
     if (req.user) {
-      const currentUser = await User.findById(req.user._id);
-      if (currentUser) savedChallengesArray = currentUser.savedChallenges || [];
+      const user = await User.findById(req.user._id).select('savedChallenges');
+      if (user) savedChallengesArray = user.savedChallenges || [];
     }
 
-    const formattedChallenges = challenges.map((c) => formatChallenge(c, savedChallengesArray));
+    let formattedChallenges = challengesDoc.map((doc) =>
+      formatChallenge(doc, savedChallengesArray)
+    );
+
+    if (status && status !== 'all') {
+      const targetStatus = status.toLowerCase();
+      formattedChallenges = formattedChallenges.filter((c) => {
+        const computed = c.computedStatus.toLowerCase();
+        const rawStatus = (c.status || '').toLowerCase();
+
+        if (targetStatus === 'open' || targetStatus === 'ouvert') {
+          return computed === 'open' || rawStatus === 'open' || rawStatus === 'ouvert';
+        }
+        if (targetStatus === 'in_progress' || targetStatus === 'en_cours') {
+          return computed === 'open' || rawStatus === 'in_progress' || rawStatus === 'en_cours';
+        }
+        if (targetStatus === 'closed' || targetStatus === 'cloture') {
+          return computed === 'closed' || rawStatus === 'closed' || rawStatus === 'cloture';
+        }
+        return computed === targetStatus || rawStatus === targetStatus;
+      });
+    }
 
     return res.status(200).json({
-      total,
-      page: pageNum,
-      pages: Math.ceil(total / limitNum),
-      limit: limitNum,
+      count: formattedChallenges.length,
       challenges: formattedChallenges
     });
 
   } catch (error) {
     console.error('Error fetching challenges:', error);
-    return res.status(500).json({
-      message: 'Server error while fetching challenges.',
-      error: error.message
-    });
+    return res.status(500).json({ message: 'Server error while fetching challenges.' });
   }
 };
 
 /**
  * @desc    Get single challenge by ID
  * @route   GET /api/challenges/:id
- * @access  Public
+ * @access  Public (Optional auth for isSaved status)
  */
 const getChallengeById = async (req, res) => {
   try {
-    const challengeId = req.params.id;
+    const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(challengeId)) {
-      return res.status(404).json({ message: 'Invalid Challenge ID format.' });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid challenge ID format.' });
     }
 
-    const challenge = await Challenge.findById(challengeId);
-    if (!challenge) {
+    const challengeDoc = await Challenge.findById(id);
+
+    if (!challengeDoc) {
       return res.status(404).json({ message: 'Challenge not found.' });
     }
 
     let savedChallengesArray = [];
     if (req.user) {
-      const currentUser = await User.findById(req.user._id);
-      if (currentUser) savedChallengesArray = currentUser.savedChallenges || [];
+      const user = await User.findById(req.user._id).select('savedChallenges');
+      if (user) savedChallengesArray = user.savedChallenges || [];
     }
 
     return res.status(200).json({
-      challenge: formatChallenge(challenge, savedChallengesArray)
+      challenge: formatChallenge(challengeDoc, savedChallengesArray)
     });
 
   } catch (error) {
     console.error('Error fetching challenge by ID:', error);
-    return res.status(500).json({
-      message: 'Server error while fetching challenge.',
-      error: error.message
-    });
-  }
-};
-
-/**
- * @desc    Get all participant submissions for a specific challenge (Admin only)
- * @route   GET /api/challenges/:id/submissions
- * @access  Private (Admin required)
- */
-const getChallengeSubmissions = async (req, res) => {
-  try {
-    const challengeId = req.params.id;
-    const Participation = require('../models/Participation');
-
-    const participations = await Participation.find({ challengeId })
-      .populate('userId', 'firstName lastName email role')
-      .populate('ideaId')
-      .sort({ createdAt: -1 });
-
-    const submissions = participations.map((p) => ({
-      _id: p._id,
-      participant: p.userId
-        ? {
-            _id: p.userId._id,
-            name: `${p.userId.firstName} ${p.userId.lastName}`.trim() || p.userId.email,
-            email: p.userId.email
-          }
-        : { name: 'Citoyen INPPLC', email: 'anonyme@nazahatech.ma' },
-      submittedIdea: p.ideaId || null,
-      status: p.status || 'pending',
-      createdAt: p.createdAt
-    }));
-
-    return res.status(200).json({
-      count: submissions.length,
-      submissions
-    });
-  } catch (error) {
-    console.error('Erreur récupération soumissions du défi :', error);
-    return res.status(500).json({ message: 'Erreur lors du chargement des soumissions au défi.' });
+    return res.status(500).json({ message: 'Server error while fetching challenge details.' });
   }
 };
 
@@ -353,6 +289,5 @@ module.exports = {
   createChallenge,
   toggleBookmark,
   getChallenges,
-  getChallengeById,
-  getChallengeSubmissions
+  getChallengeById
 };

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api'
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 });
 
 API.interceptors.request.use((config) => {
@@ -37,22 +37,26 @@ export const getActivitySummaryApi = async () => {
   return response.data;
 };
 
-export const getUserIdeasApi = async (params = {}) => {
+export const getUserIdeasApi = async (pageArg = 1, limitArg = 10) => {
+  const params = typeof pageArg === 'object' ? pageArg : { page: pageArg, limit: limitArg };
   const response = await API.get('/users/me/ideas', { params });
   return response.data;
 };
 
-export const getUserCommentsApi = async (params = {}) => {
+export const getUserCommentsApi = async (pageArg = 1, limitArg = 10) => {
+  const params = typeof pageArg === 'object' ? pageArg : { page: pageArg, limit: limitArg };
   const response = await API.get('/users/me/comments', { params });
   return response.data;
 };
 
-export const getUserChallengesApi = async (params = {}) => {
+export const getUserChallengesApi = async (pageArg = 1, limitArg = 10) => {
+  const params = typeof pageArg === 'object' ? pageArg : { page: pageArg, limit: limitArg };
   const response = await API.get('/users/me/challenges', { params });
   return response.data;
 };
 
-export const getUserInteractionsApi = async (params = {}) => {
+export const getUserInteractionsApi = async (pageArg = 1, limitArg = 10) => {
+  const params = typeof pageArg === 'object' ? pageArg : { page: pageArg, limit: limitArg };
   const response = await API.get('/users/me/interactions', { params });
   return response.data;
 };

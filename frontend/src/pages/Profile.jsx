@@ -9,7 +9,7 @@ import {
   getUserCommentsApi,
   getUserChallengesApi
 } from '../api/authApi';
-import { getUserChallengeSubmissionsApi } from '../api/challengeApi';
+import { getUserChallengeSubmissionsApi } from '../api/challengeSubmissionApi';
 import './Profile.css';
 
 export default function Profile() {
@@ -25,7 +25,7 @@ export default function Profile() {
   const [updateMsg, setUpdateMsg] = useState('');
   const [updateError, setUpdateError] = useState('');
 
-  // États du résumé léger d'activité
+  // États du résumé d'activité
   const [summary, setSummary] = useState({
     ideasCount: 0,
     commentsCount: 0,
@@ -50,7 +50,7 @@ export default function Profile() {
     }
   }, [user]);
 
-  // Chargement du résumé léger d'activité
+  // Chargement du résumé d'activité et des soumissions aux défis
   useEffect(() => {
     fetchSummary();
     fetchChallengeSubmissions();
@@ -90,16 +90,17 @@ export default function Profile() {
       setTabLoading(true);
       let res;
       if (activeTab === 'ideas') {
-        res = await getUserIdeasApi(page);
+        res = await getUserIdeasApi({ page, limit: 10 });
       } else if (activeTab === 'comments') {
-        res = await getUserCommentsApi(page);
+        res = await getUserCommentsApi({ page, limit: 10 });
       } else if (activeTab === 'challenges') {
-        res = await getUserChallengesApi(page);
+        res = await getUserChallengesApi({ page, limit: 10 });
       }
 
       if (res) {
-        setTabData(res.data || []);
-        setHasMore(res.hasMore || false);
+        const list = res.ideas || res.comments || res.challenges || res.submissions || res.data || [];
+        setTabData(list);
+        setHasMore(res.page < res.pages);
       }
     } catch (err) {
       console.error('Erreur onglet activité :', err);
@@ -220,6 +221,7 @@ export default function Profile() {
               placeholder="Votre prénom"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
+              className="form-input-lg"
             />
           </div>
 
@@ -230,6 +232,7 @@ export default function Profile() {
               placeholder="Votre nom"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
+              className="form-input-lg"
             />
           </div>
 
@@ -240,6 +243,7 @@ export default function Profile() {
               placeholder="+212 6 00 00 00 00"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
+              className="form-input-lg"
             />
           </div>
 
@@ -249,11 +253,11 @@ export default function Profile() {
               type="email"
               disabled
               value={user?.email || ''}
-              style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed', color: '#6b7280' }}
+              className="form-input-lg"
             />
           </div>
 
-          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+          <div className="profile-form-actions">
             <button
               type="submit"
               disabled={updatingProfile}
@@ -300,14 +304,14 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Onglet Soumissions aux Défis */}
+        {/* Onglet Soumissions aux Défis (BDD ChallengeSubmission) */}
         {activeTab === 'challenge_submissions' ? (
           <div>
             {challengeSubmissions.length === 0 ? (
               <div className="empty-state-box">
                 <div className="empty-icon">🎯</div>
-                <h3>Vous n'avez soumis aucune idée dans le cadre d'un défi</h3>
-                <p>Découvrez les défis stratégiques de l'INPPLC et proposez vos solutions innovantes !</p>
+                <h3>Vous n'avez soumis aucune proposition dans le cadre d'un défi</h3>
+                <p>Découvrez les défis stratégiques de l'INPPLC et proposez vos solutions d'innovation !</p>
                 <button onClick={() => navigate('/challenges')} className="btn-hero-primary" style={{ marginTop: '1rem' }}>
                   Voir les défis ouverts
                 </button>
@@ -315,26 +319,36 @@ export default function Profile() {
             ) : (
               <div className="activity-items-list">
                 {challengeSubmissions.map((sub) => (
-                  <div key={sub._id} className="activity-item-card" onClick={() => navigate(`/ideas/${sub._id}`)} style={{ cursor: 'pointer' }}>
+                  <div key={sub._id} className="activity-item-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <span className="category-tag" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontWeight: 700 }}>
-                        🏆 Défi : {translateText(sub.challengeTitle || sub.challengeId?.title || 'Défi INPPLC')}
+                        🏆 Défi : {translateText(sub.challengeId?.title || 'Défi INPPLC')}
                       </span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: sub.status === 'approved' ? '#15803d' : '#b45309', backgroundColor: sub.status === 'approved' ? '#dcfce7' : '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '6px' }}>
-                        {sub.status === 'approved' ? '🟢 Approuvé' : '⏳ En cours d\'examen'}
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: sub.status === 'accepted' ? '#15803d' : sub.status === 'rejected' ? '#b91c1c' : '#b45309', backgroundColor: sub.status === 'accepted' ? '#dcfce7' : sub.status === 'rejected' ? '#fee2e2' : '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '6px' }}>
+                        {sub.status === 'accepted' ? '🟢 Acceptée' : sub.status === 'rejected' ? '🔴 Rejetée' : '⏳ En modération'}
                       </span>
                     </div>
 
                     <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827', marginBottom: '0.35rem' }}>
-                      {translateText(sub.title)}
+                      {sub.title}
                     </h4>
                     <p style={{ fontSize: '0.875rem', color: '#4b5563', lineHeight: 1.5, marginBottom: '0.75rem' }}>
-                      {translateText(sub.description)}
+                      {sub.description}
                     </p>
+
+                    {Array.isArray(sub.attachments) && sub.attachments.length > 0 && (
+                      <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {sub.attachments.map((att, aIdx) => (
+                          <a key={aIdx} href={att.fileUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.775rem', fontWeight: 700, backgroundColor: '#f3f4f6', color: '#111827', padding: '0.25rem 0.65rem', borderRadius: '6px', textDecoration: 'none' }}>
+                            📎 {att.fileName} ({att.fileSize})
+                          </a>
+                        ))}
+                      </div>
+                    )}
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.775rem', color: '#9ca3af' }}>
                       <span>Déposé le {new Date(sub.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}</span>
-                      <span style={{ color: 'var(--primary-green)', fontWeight: 700 }}>Voir la soumission →</span>
+                      <span style={{ color: 'var(--primary-green)', fontWeight: 700 }}>Soumission au Défi</span>
                     </div>
                   </div>
                 ))}
@@ -357,12 +371,34 @@ export default function Profile() {
               <div className="activity-items-list">
                 {tabData.map((item) => (
                   <div key={item._id} className="activity-item-card" onClick={() => item.title && navigate(activeTab === 'challenges' ? `/challenges/${item._id}` : `/ideas/${item._id || item.idea}`)} style={{ cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <span className="category-tag" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontWeight: 700, fontSize: '0.75rem' }}>
+                        🏷️ {translateText(item.category || 'Général')}
+                      </span>
+                      {activeTab === 'ideas' && (
+                        <span style={{ fontSize: '0.775rem', fontWeight: 700, color: item.status === 'approved' ? '#15803d' : '#b45309', backgroundColor: item.status === 'approved' ? '#dcfce7' : '#fef3c7', padding: '0.15rem 0.55rem', borderRadius: '6px' }}>
+                          {item.status === 'approved' ? '🟢 Publiée' : '⏳ En modération'}
+                        </span>
+                      )}
+                    </div>
+
                     <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', marginBottom: '0.35rem' }}>
                       {translateText(item.title || item.content || 'Contribution')}
                     </h4>
-                    {item.description && <p style={{ fontSize: '0.85rem', color: '#4b5563' }}>{translateText(item.description)}</p>}
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                      {new Date(item.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
+                    {item.description && <p style={{ fontSize: '0.85rem', color: '#4b5563', lineHeight: 1.5, marginBottom: '0.5rem' }}>{translateText(item.description)}</p>}
+
+                    {Array.isArray(item.attachments) && item.attachments.length > 0 && (
+                      <div style={{ marginBottom: '0.5rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        {item.attachments.map((att, aIdx) => (
+                          <span key={aIdx} style={{ fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#f3f4f6', color: '#374151', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                            📎 {att.fileName} ({att.fileSize})
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.35rem' }}>
+                      Soumise le {new Date(item.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
                     </div>
                   </div>
                 ))}

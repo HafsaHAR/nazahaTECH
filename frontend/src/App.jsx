@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Challenges from './pages/Challenges';
 import ChallengeDetail from './pages/ChallengeDetail';
 import SubmitIdea from './pages/SubmitIdea';
+import SubmitChallengeSubmission from './pages/SubmitChallengeSubmission';
 import Ideas from './pages/Ideas';
 import IdeaDetail from './pages/IdeaDetail';
 import Profile from './pages/Profile';
@@ -65,6 +66,7 @@ function AppRoutes() {
 
         {/* Routes Protégées par Authentification */}
         <Route path="/submit-idea" element={<ProtectedRoute><SubmitIdea /></ProtectedRoute>} />
+        <Route path="/submit-challenge" element={<ProtectedRoute><SubmitChallengeSubmission /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       </Route>
 

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
 dotenv.config();
@@ -9,61 +9,52 @@ const runSeedIfEmpty = async () => {
   try {
     const userCount = await User.countDocuments();
     if (userCount > 0) {
-      console.log(`ℹ️ La base de données contient déjà ${userCount} utilisateurs. Seeding ignoré.`);
+      console.log(`ℹ️ La base de données contient déjà ${userCount} utilisateurs. Seeding d'utilisateurs ignoré.`);
       return;
     }
 
-    console.log('Seeding des utilisateurs de test initiaux...');
+    console.log('Création des comptes administrateur et utilisateurs de démonstration...');
+    const salt = await bcrypt.genSalt(10);
+    const defaultPasswordHash = await bcrypt.hash('Password123!', salt);
 
-    const hashedPasswordAdmin = await bcrypt.hash('Admin123!', 10);
-    const hashedPasswordUser = await bcrypt.hash('User123!', 10);
-
-    const testUsers = [
+    const initialUsers = [
       {
+        name: 'Administrateur INPPLC',
         firstName: 'Administrateur',
         lastName: 'INPPLC',
         email: 'admin@nazahatech.ma',
-        phoneNumber: '0600000000',
-        password: hashedPasswordAdmin,
-        role: 'admin'
+        password: defaultPasswordHash,
+        role: 'admin',
+        phoneNumber: '0661000000',
+        organization: 'INPPLC Siège Rabat'
       },
       {
+        name: 'Hafsa Benali',
         firstName: 'Hafsa',
         lastName: 'Benali',
         email: 'hafsa@nazahatech.ma',
+        password: defaultPasswordHash,
+        role: 'user',
         phoneNumber: '0661234567',
-        password: hashedPasswordUser,
-        role: 'user'
+        organization: 'Citoyenne Engagée'
       },
       {
-        firstName: 'Youssef',
-        lastName: 'El Mansouri',
-        email: 'youssef@nazahatech.ma',
+        name: 'Karim Tazi',
+        firstName: 'Karim',
+        lastName: 'Tazi',
+        email: 'karim@nazahatech.ma',
+        password: defaultPasswordHash,
+        role: 'user',
         phoneNumber: '0669876543',
-        password: hashedPasswordUser,
-        role: 'user'
+        organization: 'Développeur Open Data'
       }
     ];
 
-    const inserted = await User.insertMany(testUsers);
-    console.log(`✅ Seeding réussi : ${inserted.length} utilisateurs insérés en BDD.`);
+    await User.insertMany(initialUsers);
+    console.log(`✅ Seeding d'utilisateurs réussi : ${initialUsers.length} comptes insérés avec succès.`);
   } catch (error) {
     console.error('❌ Erreur lors du seeding des utilisateurs :', error.message);
   }
 };
-
-if (require.main === module) {
-  mongoose
-    .connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/nazahatech')
-    .then(async () => {
-      await User.deleteMany({});
-      await runSeedIfEmpty();
-      process.exit(0);
-    })
-    .catch((err) => {
-      console.error('❌ Erreur de connexion MongoDB :', err);
-      process.exit(1);
-    });
-}
 
 module.exports = { runSeedIfEmpty };

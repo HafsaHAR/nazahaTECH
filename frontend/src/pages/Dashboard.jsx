@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getIdeasApi, voteIdeaApi } from '../api/ideaApi';
 import AuthPromptModal from '../components/AuthPromptModal';
+import AnalyticsCharts from '../components/AnalyticsCharts';
+import { exportPDFReport, exportCSVReport } from '../utils/reportExporter';
 import {
   getAdminMetricsApi,
   getAdminNotificationsApi,
@@ -28,7 +30,7 @@ export default function Dashboard() {
   const [modalActionName, setModalActionName] = useState('');
 
   // États spécifiques Admin
-  const [adminTab, setAdminTab] = useState('pending_ideas');
+  const [adminTab, setAdminTab] = useState('analytics');
   const [metrics, setMetrics] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [rejectedHistory, setRejectedHistory] = useState([]);
@@ -120,6 +122,43 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Erreur approbation :', err);
     }
+  };
+
+  const handleExportPDF = () => {
+    const columns = [
+      { header: 'Titre de la Proposition', accessor: (row) => row.title },
+      { header: 'Catégorie', accessor: (row) => row.category || 'Général' },
+      { header: 'Statut', accessor: (row) => (row.status === 'approved' ? 'Approuvée' : 'En modération') },
+      { header: 'Votes', accessor: (row) => row.voteCount || row.votes?.length || 0 },
+      { header: 'Date de Création', accessor: (row) => new Date(row.createdAt).toLocaleDateString('fr-FR') }
+    ];
+
+    exportPDFReport({
+      title: '🇲🇦 Rapport d\'Activité & Modération INPPLC — NazahaTECH',
+      subtitle: 'Bilan synthétique des propositions d\'innovation citoyenne enregistrées sur la plateforme.',
+      data: ideas,
+      columns,
+      lang,
+      translateText
+    });
+  };
+
+  const handleExportCSV = () => {
+    const columns = [
+      { header: 'ID', accessor: (row) => row._id },
+      { header: 'Titre', accessor: (row) => row.title },
+      { header: 'Description', accessor: (row) => row.description },
+      { header: 'Categorie', accessor: (row) => row.category },
+      { header: 'Statut', accessor: (row) => row.status },
+      { header: 'Votes', accessor: (row) => row.voteCount || row.votes?.length || 0 }
+    ];
+
+    exportCSVReport({
+      filename: 'Rapport_Idees_INPPLC',
+      data: ideas,
+      columns,
+      translateText
+    });
   };
 
   const getAuthorName = (author) => {
@@ -230,20 +269,39 @@ export default function Dashboard() {
       {/* Module Admin (si connecté) */}
       {isAdmin && (
         <div className="admin-moderation-section">
-          <div className="moderation-tabs">
-            <button className={`tab-btn ${adminTab === 'pending_ideas' ? 'active' : ''}`} onClick={() => setAdminTab('pending_ideas')}>
-              {t('admin.tab_pending')} ({pendingIdeas.length})
-            </button>
-            <button className={`tab-btn ${adminTab === 'all_ideas' ? 'active' : ''}`} onClick={() => setAdminTab('all_ideas')}>
-              {t('admin.tab_published')} ({ideas.length})
-            </button>
-            <button className={`tab-btn ${adminTab === 'history' ? 'active' : ''}`} onClick={() => setAdminTab('history')}>
-              {t('admin.tab_rejected')} ({rejectedHistory.length})
-            </button>
-            <button className={`tab-btn ${adminTab === 'notifications' ? 'active' : ''}`} onClick={() => setAdminTab('notifications')}>
-              {t('admin.tab_notifications')} {unreadCount > 0 && <span style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', marginLeft: '0.35rem' }}>{unreadCount}</span>}
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div className="moderation-tabs">
+              <button className={`tab-btn ${adminTab === 'analytics' ? 'active' : ''}`} onClick={() => setAdminTab('analytics')}>
+                📊 {translateText('Analytique & Impact')}
+              </button>
+              <button className={`tab-btn ${adminTab === 'pending_ideas' ? 'active' : ''}`} onClick={() => setAdminTab('pending_ideas')}>
+                {t('admin.tab_pending')} ({pendingIdeas.length})
+              </button>
+              <button className={`tab-btn ${adminTab === 'all_ideas' ? 'active' : ''}`} onClick={() => setAdminTab('all_ideas')}>
+                {t('admin.tab_published')} ({ideas.length})
+              </button>
+              <button className={`tab-btn ${adminTab === 'history' ? 'active' : ''}`} onClick={() => setAdminTab('history')}>
+                {t('admin.tab_rejected')} ({rejectedHistory.length})
+              </button>
+              <button className={`tab-btn ${adminTab === 'notifications' ? 'active' : ''}`} onClick={() => setAdminTab('notifications')}>
+                {t('admin.tab_notifications')} {unreadCount > 0 && <span style={{ backgroundColor: '#f59e0b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', marginLeft: '0.35rem' }}>{unreadCount}</span>}
+              </button>
+            </div>
+
+            {/* Boutons d'exportation de Rapports */}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={handleExportPDF} className="btn-hero-primary" style={{ padding: '0.5rem 0.9rem', fontSize: '0.825rem' }}>
+                📄 {translateText('Rapport PDF')}
+              </button>
+              <button onClick={handleExportCSV} className="btn-hero-secondary" style={{ padding: '0.5rem 0.9rem', fontSize: '0.825rem' }}>
+                📊 {translateText('Export Excel/CSV')}
+              </button>
+            </div>
           </div>
+
+          {adminTab === 'analytics' && (
+            <AnalyticsCharts ideas={ideas} metrics={metrics} />
+          )}
 
           {adminTab === 'pending_ideas' && (
             <div>

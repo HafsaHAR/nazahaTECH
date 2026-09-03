@@ -2,8 +2,6 @@ const mongoose = require('mongoose');
 const path = require('path');
 const Idea = require('../models/Idea');
 const IdeaHistory = require('../models/IdeaHistory');
-const Participation = require('../models/Participation');
-const Challenge = require('../models/Challenge');
 const { triggerAdminNotification } = require('./notificationController');
 
 /**
@@ -39,13 +37,13 @@ const uploadIdeaAttachment = async (req, res) => {
 };
 
 /**
- * @desc    Créer une nouvelle idée (avec gestion des pièces jointes et des défis)
+ * @desc    Créer une nouvelle idée citoyenne régulière
  * @route   POST /api/ideas
  * @access  Private (JWT requis)
  */
 const createIdea = async (req, res) => {
   try {
-    const { title, category, description, challengeId, attachments } = req.body;
+    const { title, category, description, attachments } = req.body;
 
     if (!title || !category || !description) {
       return res.status(400).json({
@@ -66,13 +64,12 @@ const createIdea = async (req, res) => {
     }
 
     const initialStatus = req.user.role === 'admin' ? 'approved' : 'pending';
-    const cleanChallengeId = (challengeId && challengeId !== 'null' && challengeId !== 'undefined') ? challengeId : null;
 
     const idea = await Idea.create({
       title: title.trim(),
       category: category,
       description: description.trim(),
-      challengeId: cleanChallengeId,
+      challengeId: null,
       author: req.user._id,
       createdBy: req.user._id,
       status: initialStatus,
@@ -81,33 +78,17 @@ const createIdea = async (req, res) => {
       attachments: Array.isArray(attachments) ? attachments : []
     });
 
-    // Si l'idée est soumise dans le cadre d'un défi spécifique, créer l'enregistrement de Participation
-    if (cleanChallengeId) {
-      await Participation.create({
-        userId: req.user._id,
-        challengeId: cleanChallengeId,
-        ideaId: idea._id,
-        status: 'pending'
-      });
-
-      if (mongoose.Types.ObjectId.isValid(cleanChallengeId)) {
-        await Challenge.findByIdAndUpdate(cleanChallengeId, { $inc: { participantsCount: 1 } });
-      }
-    }
-
     const userName = req.user.name || `${req.user.firstName} ${req.user.lastName}`;
     await triggerAdminNotification(
       'NEW_IDEA',
-      `Nouvelle idée soumise par ${userName} : "${idea.title.substring(0, 40)}..."`,
+      `Nouvelle idée citoyenne soumise par ${userName} : "${idea.title.substring(0, 40)}..."`,
       idea._id
     );
 
     const populatedIdea = await Idea.findById(idea._id).populate('author', 'firstName lastName email role');
 
     return res.status(201).json({
-      message: cleanChallengeId
-        ? 'Participation au défi soumise avec succès. Elle est en cours d\'examen.'
-        : 'Idée soumise avec succès. Elle est en cours de modération par l\'équipe INPPLC.',
+      message: 'Idée soumise avec succès. Elle est en cours de modération par l\'équipe INPPLC.',
       idea: populatedIdea
     });
 
@@ -121,7 +102,7 @@ const createIdea = async (req, res) => {
 };
 
 /**
- * @desc    Récupérer la liste des idées (ISOLATION STRICTE des soumissions de défis)
+ * @desc    Récupérer la liste des idées citoyennes régulières (Exclut strictement les soumissions de défis)
  * @route   GET /api/ideas
  * @access  Public
  */
@@ -130,25 +111,32 @@ const getIdeas = async (req, res) => {
     const { category, search, sort, status } = req.query;
     const filter = {};
 
-    if (status) {
+    if (status && status !== 'all' && status !== 'all_ideas') {
       filter.status = status;
     } else {
       filter.status = { $ne: 'rejected' };
     }
 
-    filter.challengeId = { $in: [null, '', 'null', 'undefined'] };
-
     if (category && category !== 'Toutes' && category !== 'All') {
       filter.category = category;
     }
 
+    // Exclure strictement les soumissions reliées à des défis
+    filter.$or = [
+      { challengeId: null },
+      { challengeId: '' },
+      { challengeId: { $exists: false } }
+    ];
+
     if (search && search.trim() !== '') {
       const searchTerm = search.trim();
-      filter.$or = [
-        { title: { $regex: searchTerm, $options: 'i' } },
-        { description: { $regex: searchTerm, $options: 'i' } }
+      const searchRegex = { $regex: searchTerm, $options: 'i' };
+      filter.$and = [
+        { $or: [{ title: searchRegex }, { description: searchRegex }] }
       ];
     }
+
+    console.log('🔍 [DEBUG getIdeas] req.query:', req.query, '-> constructed filter:', JSON.stringify(filter));
 
     let sortOptions = { createdAt: -1 };
     if (sort === 'popular') {
@@ -161,6 +149,8 @@ const getIdeas = async (req, res) => {
       .populate('author', 'firstName lastName email role')
       .populate('createdBy', 'firstName lastName email role')
       .sort(sortOptions);
+
+    console.log('🔍 [DEBUG getIdeas] Found count:', ideas.length);
 
     return res.status(200).json({
       count: ideas.length,
@@ -263,7 +253,7 @@ const rejectIdea = async (req, res) => {
     await Idea.findByIdAndDelete(req.params.id);
 
     return res.status(200).json({
-      message: 'Idée rejetée, supprimée de la base de données utilisateur et archivée dans l\'historique d\'administration.'
+      message: 'Idée rejetée, supprimée de la base de données et archivée.'
     });
   } catch (error) {
     console.error('Erreur lors du rejet de l\'idée :', error);

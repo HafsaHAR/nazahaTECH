@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema(
   {
@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: {
-        values: ['user', 'admin'],
+        values: ['user', 'admin', 'participant', 'PARTICIPANT'],
         message: 'Le rôle {VALUE} n\'est pas valide'
       },
       default: 'user',

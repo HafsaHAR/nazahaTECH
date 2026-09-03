@@ -58,7 +58,7 @@ export default function Challenges() {
       setAuthModalOpen(true);
       return;
     }
-    navigate(`/submit-idea?challengeId=${challengeId}`);
+    navigate(`/submit-challenge?challengeId=${challengeId}`);
   };
 
   const getStatusBadgeInfo = (c) => {
@@ -104,7 +104,7 @@ export default function Challenges() {
           </p>
         </div>
 
-        {/* Bouton de création STRICTEMENT RÉSERVÉ AUX ADMINISTRATEURS */}
+        {/* Bouton de création RÉSERVÉ AUX ADMINISTRATEURS */}
         {isAdmin && (
           <button
             type="button"

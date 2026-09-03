@@ -6,12 +6,15 @@ const {
   createChallenge,
   toggleBookmark,
   getChallenges,
-  getChallengeById,
-  getChallengeSubmissions
+  getChallengeById
 } = require('../controllers/challengeController');
+const {
+  createSubmission,
+  getSubmissionsByChallenge
+} = require('../controllers/challengeSubmissionController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
-// Optional auth middleware to extract req.user if Authorization header is present
+// Middleware d'authentification optionnel pour déduire l'état d'enregistrement en favori (isSaved)
 const optionalAuth = async (req, res, next) => {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
@@ -22,21 +25,26 @@ const optionalAuth = async (req, res, next) => {
       );
       req.user = await User.findById(decoded.id).select('-password');
     } catch (e) {
-      // Ignore token errors for public routes
+      // Ignorer les erreurs pour les routes publiques
     }
   }
   next();
 };
 
-// Public routes (with optional auth for bookmark status extraction)
+// Routes publiques de consultation des défis
 router.get('/', optionalAuth, getChallenges);
 router.get('/:id', optionalAuth, getChallengeById);
 
-// Protected User routes (Bookmark favorite)
+// Route protégée utilisateur : Marquer / retirer des favoris
 router.post('/:id/bookmark', protect, toggleBookmark);
 
-// Protected Admin-ONLY routes: Create new challenge & View submissions
+// Route protégée utilisateur : Soumettre une idée dédiée à un défi (ChallengeSubmission)
+router.post('/:challengeId/submissions', protect, createSubmission);
+
+// Route réservée aux administrateurs : Consulter toutes les soumissions d'un défi spécifique
+router.get('/:challengeId/submissions', protect, authorize('admin'), getSubmissionsByChallenge);
+
+// Route réservée aux administrateurs : Créer un nouveau défi
 router.post('/', protect, authorize('admin'), createChallenge);
-router.get('/:id/submissions', protect, authorize('admin'), getChallengeSubmissions);
 
 module.exports = router;

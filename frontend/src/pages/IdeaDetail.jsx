@@ -32,7 +32,8 @@ export default function IdeaDetail() {
       setLoading(true);
       setError('');
       const ideaData = await getIdeaByIdApi(id);
-      setIdea(ideaData);
+      const parsedIdea = ideaData.idea || ideaData;
+      setIdea(parsedIdea);
 
       const commentsData = await getCommentsApi(id);
       if (commentsData && Array.isArray(commentsData.comments)) {
@@ -60,15 +61,12 @@ export default function IdeaDetail() {
     }
 
     try {
-      const hasVoted = idea.votes?.includes(user.id);
-      const newVotes = hasVoted
-        ? idea.votes.filter((vId) => vId !== user.id)
-        : [...(idea.votes || []), user.id];
+      const hasVoted = idea.voters?.includes(user.id) || idea.votes?.includes(user.id);
+      const currentCount = idea.voteCount !== undefined ? idea.voteCount : (idea.voters?.length || 0);
 
       setIdea({
         ...idea,
-        votes: newVotes,
-        votesCount: newVotes.length
+        voteCount: hasVoted ? Math.max(0, currentCount - 1) : currentCount + 1
       });
 
       await voteIdeaApi(id);
@@ -107,19 +105,31 @@ export default function IdeaDetail() {
   const getAuthorName = (author) => {
     if (!author) return 'Citoyen NazahaTECH';
     if (typeof author === 'object') {
-      if (author.firstName && author.lastName) return `${author.firstName} ${author.lastName}`;
-      if (author.name) return author.name;
+      if (author.firstName && author.lastName && author.firstName !== 'undefined') return `${author.firstName} ${author.lastName}`;
+      if (author.name && author.name !== 'undefined undefined') return author.name;
       return author.email || 'Citoyen NazahaTECH';
     }
     return author;
   };
 
-  const hasVoted = user && Array.isArray(idea?.votes) && idea.votes.includes(user.id);
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Récemment';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Récemment';
+    return d.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR');
+  };
+
+  const hasVoted = user && (
+    (Array.isArray(idea?.voters) && idea.voters.includes(user.id)) ||
+    (Array.isArray(idea?.votes) && idea.votes.includes(user.id))
+  );
+
+  const votesDisplay = idea?.voteCount !== undefined ? idea.voteCount : (idea?.voters?.length || 0);
 
   if (loading) {
     return (
       <div className="idea-detail-container" style={{ textAlign: 'center', padding: '4rem', color: '#6b7280' }}>
-        Chargement de l'idée en cours...
+        Chargement de la fiche de l'idée...
       </div>
     );
   }
@@ -152,23 +162,23 @@ export default function IdeaDetail() {
       <div className="idea-detail-card">
         <div className="idea-detail-header-tags">
           <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
-            <span className="category-tag">{translateText(idea?.category)}</span>
+            <span className="category-tag">🏷️ {translateText(idea?.category || 'Général')}</span>
             <span className={`status-tag ${idea?.status === 'approved' ? 'approved' : 'pending'}`}>
               {idea?.status === 'approved' ? 'Publiée & En ligne' : 'En attente de modération'}
             </span>
           </div>
-          <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
-            {t('meta.published_on')} {new Date(idea?.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
+          <span className="idea-date-badge">
+            Publié le {formatDate(idea?.createdAt)}
           </span>
         </div>
 
-        <h1 className="idea-detail-title">{translateText(idea?.title)}</h1>
+        <h1 className="idea-detail-title">{translateText(idea?.title || 'Proposition d\'innovation')}</h1>
 
         <div className="idea-detail-description">
-          {translateText(idea?.description)}
+          {translateText(idea?.description || 'Aucune description fournie.')}
         </div>
 
-        {/* Section Affichage des Pièces Jointes & Fichiers de l'Idée */}
+        {/* Section Affichage des Pièces Jointes */}
         {idea?.attachments && idea.attachments.length > 0 && (
           <div style={{ marginTop: '1.75rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '1.25rem' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -230,9 +240,9 @@ export default function IdeaDetail() {
           <button
             onClick={handleVote}
             className={`btn-vote ${hasVoted ? 'voted' : ''}`}
-            style={{ padding: '0.65rem 1.5rem', fontSize: '0.95rem' }}
+            style={{ padding: '0.6rem 1.35rem', fontSize: '0.9rem' }}
           >
-            👍 <strong>{idea?.votesCount || idea?.votes?.length || 0}</strong> {hasVoted ? t('action.voted') : t('action.vote')}
+            👍 <strong>{votesDisplay}</strong> {hasVoted ? t('action.voted') : t('action.vote')}
           </button>
         </div>
       </div>
@@ -240,7 +250,7 @@ export default function IdeaDetail() {
       {/* Section Commentaires */}
       <div className="comments-container">
         <h3 className="comments-title">
-          💬 Commentaires ({comments.length})
+          <span>💬</span> Commentaires ({comments.length})
         </h3>
 
         {user ? (
@@ -253,12 +263,12 @@ export default function IdeaDetail() {
               onChange={(e) => setNewComment(e.target.value)}
               className="comment-textarea"
             />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.65rem' }}>
               <button
                 type="submit"
                 disabled={commentLoading}
                 className="btn-hero-primary"
-                style={{ padding: '0.55rem 1.25rem', fontSize: '0.875rem' }}
+                style={{ padding: '0.6rem 1.35rem', fontSize: '0.875rem' }}
               >
                 {commentLoading ? 'Publication...' : t('action.comment')}
               </button>
@@ -280,22 +290,22 @@ export default function IdeaDetail() {
         )}
 
         {comments.length === 0 ? (
-          <div style={{ color: '#6b7280', fontSize: '0.9rem', textAlign: 'center', padding: '2rem 0' }}>
+          <div style={{ color: '#6b7280', fontSize: '0.9rem', textAlign: 'center', padding: '1.75rem 0' }}>
             Aucun commentaire pour l'instant. Soyez le premier à commenter !
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             {comments.map((comment) => (
               <div key={comment._id} className="comment-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#111827' }}>
                     {getAuthorName(comment.author)}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                    {new Date(comment.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-US' : 'fr-FR')}
+                    {formatDate(comment.createdAt)}
                   </span>
                 </div>
-                <p style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.5, margin: 0 }}>
                   {translateText(comment.content)}
                 </p>
               </div>

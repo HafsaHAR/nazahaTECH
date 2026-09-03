@@ -1,49 +1,37 @@
-const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Idea = require('../models/Idea');
 const Comment = require('../models/Comment');
 const Challenge = require('../models/Challenge');
 const Participation = require('../models/Participation');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const ChallengeSubmission = require('../models/ChallengeSubmission');
 
-/**
- * Génère un jeton JWT d'authentification
- */
+const JWT_SECRET = process.env.JWT_SECRET || 'nazahatech_jwt_secret_key_2026';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
 const generateToken = (id, role) => {
-  return jwt.sign(
-    { id, role },
-    process.env.JWT_SECRET || 'nazahatech_jwt_secret_key_2026',
-    { expiresIn: '7d' }
-  );
+  return jwt.sign({ id, role }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN
+  });
 };
 
-/**
- * Helper to ensure a clean display name without undefined values
- */
-const formatUserResponse = (userDoc) => {
-  const obj = userDoc.toObject ? userDoc.toObject() : userDoc;
-  let firstName = obj.firstName || '';
-  let lastName = obj.lastName || '';
-
-  if ((!firstName || firstName === 'undefined') && (!lastName || lastName === 'undefined')) {
-    const emailPrefix = (obj.email || '').split('@')[0] || 'Membre';
-    firstName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-    lastName = 'INPPLC';
-  }
-
-  const fullName = `${firstName} ${lastName}`.trim();
+const formatUserResponse = (user) => {
+  const nameParts = (user.name || '').trim().split(' ');
+  const firstName = user.firstName || nameParts[0] || '';
+  const lastName = user.lastName || nameParts.slice(1).join(' ') || '';
 
   return {
-    _id: obj._id,
+    _id: user._id,
+    id: user._id,
     firstName,
     lastName,
-    name: fullName,
-    email: obj.email,
-    phoneNumber: obj.phoneNumber || '',
-    role: obj.role || 'user',
-    savedChallenges: obj.savedChallenges || [],
-    createdAt: obj.createdAt
+    name: user.name || `${firstName} ${lastName}`.trim(),
+    email: user.email,
+    phoneNumber: user.phoneNumber || '',
+    role: user.role,
+    avatar: user.avatar || '',
+    createdAt: user.createdAt
   };
 };
 
@@ -54,62 +42,43 @@ const formatUserResponse = (userDoc) => {
  */
 const register = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      email,
-      confirmEmail,
-      phoneNumber,
-      password,
-      confirmPassword
-    } = req.body;
+    const { name, firstName, lastName, email, password, phoneNumber } = req.body;
 
-    if (!firstName || !lastName || !email || !confirmEmail || !password || !confirmPassword) {
+    if (!email || !password) {
       return res.status(400).json({
-        message: 'Veuillez remplir tous les champs obligatoires.'
+        message: 'L\'email et le mot de passe sont obligatoires.'
       });
     }
 
-    if (email.trim().toLowerCase() !== confirmEmail.trim().toLowerCase()) {
-      return res.status(400).json({
-        message: 'L\'adresse email et la confirmation d\'email ne correspondent pas.'
-      });
-    }
+    const cleanEmail = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: cleanEmail });
 
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        message: 'Le mot de passe et sa confirmation ne correspondent pas.'
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        message: 'Le mot de passe doit contenir au moins 6 caractères.'
-      });
-    }
-
-    const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     if (existingUser) {
       return res.status(400).json({
-        message: 'Un utilisateur avec cet email existe déjà.'
+        message: 'Cet email est déjà utilisé. Veuillez vous connecter.'
       });
     }
 
-    const user = await User.create({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim().toLowerCase(),
-      phoneNumber: phoneNumber ? phoneNumber.trim() : '',
+    const finalFirstName = firstName ? firstName.trim() : (name ? name.split(' ')[0] : 'Membre');
+    const finalLastName = lastName ? lastName.trim() : (name ? name.split(' ').slice(1).join(' ') : 'INPPLC');
+    const fullName = `${finalFirstName} ${finalLastName}`.trim();
+
+    const newUser = await User.create({
+      name: fullName,
+      firstName: finalFirstName,
+      lastName: finalLastName,
+      email: cleanEmail,
       password: password,
+      phoneNumber: phoneNumber ? phoneNumber.trim() : '',
       role: 'user'
     });
 
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(newUser._id, newUser.role);
 
     return res.status(201).json({
-      message: 'Utilisateur créé avec succès.',
+      message: 'Compte créé avec succès !',
       token,
-      user: formatUserResponse(user)
+      user: formatUserResponse(newUser)
     });
 
   } catch (error) {
@@ -122,7 +91,7 @@ const register = async (req, res) => {
 };
 
 /**
- * @desc    Login user
+ * @desc    Authenticate user & get token
  * @route   POST /api/auth/login
  * @access  Public
  */
@@ -132,11 +101,13 @@ const login = async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({
-        message: 'Veuillez fournir votre email et mot de passe.'
+        message: 'Veuillez saisir votre email et votre mot de passe.'
       });
     }
 
-    const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: cleanEmail }).select('+password');
+
     if (!user) {
       return res.status(401).json({
         message: 'Identifiants invalides (email ou mot de passe incorrect).'
@@ -185,7 +156,7 @@ const getMe = async (req, res) => {
 };
 
 /**
- * @desc    Update user profile with validation & sanitization
+ * @desc    Update user profile
  * @route   PATCH /api/auth/profile
  * @access  Private
  */
@@ -231,17 +202,17 @@ const getActivitySummary = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const [ideasCount, commentsCount, participationsCount, votedIdeasCount, likedCommentsCount] = await Promise.all([
+    const [ideasCount, commentsCount, createdChallengesCount, votedIdeasCount, likedCommentsCount] = await Promise.all([
       Idea.countDocuments({ author: userId }),
       Comment.countDocuments({ author: userId, isDeleted: false }),
-      Participation.countDocuments({ userId }),
+      Challenge.countDocuments({ createdBy: userId }),
       Idea.countDocuments({ voters: userId }),
       Comment.countDocuments({ 'reactions.like': userId })
     ]);
 
     const user = await User.findById(userId);
     const savedChallengesCount = user?.savedChallenges?.length || 0;
-    const totalChallenges = participationsCount + savedChallengesCount;
+    const totalChallenges = createdChallengesCount + savedChallengesCount;
     const totalInteractions = votedIdeasCount + likedCommentsCount;
 
     return res.status(200).json({
@@ -267,11 +238,18 @@ const getActivitySummary = async (req, res) => {
 const getUserIdeas = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit, 10) || 5);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
     const skip = (page - 1) * limit;
 
-    const total = await Idea.countDocuments({ author: req.user._id });
-    const ideas = await Idea.find({ author: req.user._id })
+    const filter = {
+      $or: [
+        { author: req.user._id },
+        { createdBy: req.user._id }
+      ]
+    };
+
+    const total = await Idea.countDocuments(filter);
+    const ideas = await Idea.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -279,11 +257,12 @@ const getUserIdeas = async (req, res) => {
     return res.status(200).json({
       total,
       page,
-      pages: Math.ceil(total / limit),
+      pages: Math.ceil(total / limit) || 1,
       limit,
       ideas
     });
   } catch (error) {
+    console.error('❌ Erreur getUserIdeas :', error);
     return res.status(500).json({ message: 'Erreur chargement de vos idées.' });
   }
 };
@@ -319,7 +298,7 @@ const getUserComments = async (req, res) => {
 };
 
 /**
- * @desc    Get paginated user challenges (participations & bookmarked)
+ * @desc    Get paginated user challenges (Created + Bookmarked)
  * @route   GET /api/users/me/challenges?page=1&limit=5
  * @access  Private
  */
@@ -329,11 +308,19 @@ const getUserChallenges = async (req, res) => {
     const limit = Math.max(1, parseInt(req.query.limit, 10) || 5);
     const skip = (page - 1) * limit;
 
+    const createdChallenges = await Challenge.find({ createdBy: req.user._id });
     const user = await User.findById(req.user._id).populate('savedChallenges');
     const saved = user?.savedChallenges || [];
 
-    const total = saved.length;
-    const paginatedChallenges = saved.slice(skip, skip + limit);
+    const combinedMap = new Map();
+    createdChallenges.forEach((c) => combinedMap.set(c._id.toString(), c));
+    saved.forEach((c) => {
+      if (c && c._id) combinedMap.set(c._id.toString(), c);
+    });
+
+    const allUserChallenges = Array.from(combinedMap.values());
+    const total = allUserChallenges.length;
+    const paginatedChallenges = allUserChallenges.slice(skip, skip + limit);
 
     return res.status(200).json({
       total,
@@ -348,47 +335,16 @@ const getUserChallenges = async (req, res) => {
 };
 
 /**
- * @desc    Get paginated user interactions (voted ideas & liked comments)
+ * @desc    Get paginated user interactions
  * @route   GET /api/users/me/interactions?page=1&limit=5
  * @access  Private
  */
 const getUserInteractions = async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit, 10) || 5);
-
-    const [votedIdeas, likedComments] = await Promise.all([
-      Idea.find({ voters: req.user._id }).sort({ updatedAt: -1 }).limit(10),
-      Comment.find({ 'reactions.like': req.user._id }).populate('ideaId', 'title').sort({ updatedAt: -1 }).limit(10)
-    ]);
-
-    const interactions = [
-      ...votedIdeas.map((i) => ({
-        _id: i._id,
-        type: 'idea_vote',
-        title: `Vote sur l'idée "${i.title}"`,
-        category: i.category,
-        date: i.updatedAt || i.createdAt
-      })),
-      ...likedComments.map((c) => ({
-        _id: c._id,
-        type: 'comment_like',
-        title: `J'aime sur le commentaire : "${c.content.substring(0, 40)}..."`,
-        category: 'Commentaire',
-        date: c.updatedAt || c.createdAt
-      }))
-    ].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    const total = interactions.length;
-    const skip = (page - 1) * limit;
-    const paginatedInteractions = interactions.slice(skip, skip + limit);
-
+    const votedIdeas = await Idea.find({ voters: req.user._id }).select('title category createdAt');
     return res.status(200).json({
-      total,
-      page,
-      pages: Math.ceil(total / limit),
-      limit,
-      interactions: paginatedInteractions
+      total: votedIdeas.length,
+      interactions: votedIdeas
     });
   } catch (error) {
     return res.status(500).json({ message: 'Erreur chargement de vos interactions.' });
@@ -396,44 +352,22 @@ const getUserInteractions = async (req, res) => {
 };
 
 /**
- * @desc    Get participant's challenge submissions history (Challenge + Idea + Status)
+ * @desc    Get challenge submissions for participant
  * @route   GET /api/users/me/challenge-submissions
- * @access  Private (JWT)
+ * @access  Private
  */
 const getParticipantChallengeSubmissions = async (req, res) => {
   try {
-    const participations = await Participation.find({ userId: req.user._id })
-      .populate('ideaId')
+    const submissions = await ChallengeSubmission.find({ userId: req.user._id })
+      .populate('challengeId', 'title category organization status')
       .sort({ createdAt: -1 });
-
-    const submissions = await Promise.all(
-      participations.map(async (p) => {
-        let challengeDoc = null;
-        if (p.challengeId) {
-          if (mongoose.Types.ObjectId.isValid(p.challengeId)) {
-            challengeDoc = await Challenge.findById(p.challengeId).select('title reward category status organization');
-          } else {
-            challengeDoc = await Challenge.findOne({ _id: p.challengeId }).select('title reward category status organization');
-          }
-        }
-
-        return {
-          _id: p._id,
-          challenge: challengeDoc || { title: `Défi #${p.challengeId}`, category: 'Prévention' },
-          submittedIdea: p.ideaId || null,
-          status: p.status || 'pending',
-          createdAt: p.createdAt
-        };
-      })
-    );
 
     return res.status(200).json({
       count: submissions.length,
       submissions
     });
   } catch (error) {
-    console.error('Erreur chargement des soumissions aux défis du participant :', error);
-    return res.status(500).json({ message: 'Erreur lors du chargement de vos soumissions aux défis.' });
+    return res.status(500).json({ message: 'Erreur chargement de vos soumissions aux défis.' });
   }
 };
 

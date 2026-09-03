@@ -100,7 +100,9 @@ export default function Register() {
       });
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création du compte.');
+      console.error('Erreur inscription :', err);
+      const backendMessage = err.response?.data?.message || err.message || 'Erreur lors de la création du compte.';
+      setError(backendMessage);
     } finally {
       setLoading(false);
     }
