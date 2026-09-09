@@ -21,7 +21,7 @@ const documentRoutes = require('./routes/documentRoutes');
 const initiativeRoutes = require('./routes/initiativeRoutes');
 const challengeSubmissionRoutes = require('./routes/challengeSubmissionRoutes');
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
@@ -80,8 +80,8 @@ const startServer = async () => {
   await runSeedDocumentsIfEmpty();
   await runSeedInitiativesIfEmpty();
   await runSeedIdeasIfEmpty();
-  app.listen(PORT, () => {
-    console.log(`Serveur NazahaTECH démarré sur le port ${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Serveur NazahaTECH démarré sur http://localhost:${PORT}`);
   });
 };
 

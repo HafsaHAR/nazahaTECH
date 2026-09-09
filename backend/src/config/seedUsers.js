@@ -7,33 +7,39 @@ dotenv.config();
 
 const runSeedIfEmpty = async () => {
   try {
-    const userCount = await User.countDocuments();
-    if (userCount > 0) {
-      console.log(`ℹ️ La base de données contient déjà ${userCount} utilisateurs. Seeding d'utilisateurs ignoré.`);
-      return;
-    }
-
-    console.log('Création des comptes administrateur et utilisateurs de démonstration...');
     const salt = await bcrypt.genSalt(10);
-    const defaultPasswordHash = await bcrypt.hash('Password123!', salt);
+    const adminPasswordHash = await bcrypt.hash('Admin123!', salt);
+    const userPasswordHash = await bcrypt.hash('User123!', salt);
 
-    const initialUsers = [
-      {
+    const adminExists = await User.findOne({ email: 'admin@nazahatech.ma' });
+    if (!adminExists) {
+      console.log('👑 Création du compte administrateur INPPLC...');
+      await User.create({
         name: 'Administrateur INPPLC',
         firstName: 'Administrateur',
         lastName: 'INPPLC',
         email: 'admin@nazahatech.ma',
-        password: defaultPasswordHash,
+        password: adminPasswordHash,
         role: 'admin',
         phoneNumber: '0661000000',
         organization: 'INPPLC Siège Rabat'
-      },
+      });
+    }
+
+    const userCount = await User.countDocuments();
+    if (userCount > 1) {
+      console.log(`ℹ️ La base de données contient déjà ${userCount} utilisateurs. Seeding supplémentaire ignoré.`);
+      return;
+    }
+
+    console.log('Création des comptes utilisateurs de démonstration...');
+    const initialUsers = [
       {
         name: 'Hafsa Benali',
         firstName: 'Hafsa',
         lastName: 'Benali',
         email: 'hafsa@nazahatech.ma',
-        password: defaultPasswordHash,
+        password: userPasswordHash,
         role: 'user',
         phoneNumber: '0661234567',
         organization: 'Citoyenne Engagée'
@@ -43,7 +49,7 @@ const runSeedIfEmpty = async () => {
         firstName: 'Karim',
         lastName: 'Tazi',
         email: 'karim@nazahatech.ma',
-        password: defaultPasswordHash,
+        password: userPasswordHash,
         role: 'user',
         phoneNumber: '0669876543',
         organization: 'Développeur Open Data'
@@ -51,7 +57,7 @@ const runSeedIfEmpty = async () => {
     ];
 
     await User.insertMany(initialUsers);
-    console.log(`✅ Seeding d'utilisateurs réussi : ${initialUsers.length} comptes insérés avec succès.`);
+    console.log(`✅ Seeding d'utilisateurs réussi : comptes de démonstration insérés avec succès.`);
   } catch (error) {
     console.error('❌ Erreur lors du seeding des utilisateurs :', error.message);
   }

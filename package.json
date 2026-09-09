@@ -1,0 +1,15 @@
+{
+  "name": "nazahatech-root",
+  "version": "1.0.0",
+  "description": "NazahaTECH — Plateforme d'Innovation Citoyenne INPPLC",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "npx concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "docker": "docker-compose up --build",
+    "start": "docker-compose up"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

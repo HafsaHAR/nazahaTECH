@@ -111,53 +111,50 @@ const getIdeas = async (req, res) => {
     const { category, search, sort, status } = req.query;
     const filter = {};
 
+    // 1. Filtrage par statut
     if (status && status !== 'all' && status !== 'all_ideas') {
       filter.status = status;
     } else {
       filter.status = { $ne: 'rejected' };
     }
 
+    // 2. Filtrage par catégorie
     if (category && category !== 'Toutes' && category !== 'All') {
       filter.category = category;
     }
 
-    // Exclure strictement les soumissions reliées à des défis
-    filter.$or = [
-      { challengeId: null },
-      { challengeId: '' },
-      { challengeId: { $exists: false } }
-    ];
-
+    // 3. Filtrage par mot-clé de recherche
     if (search && search.trim() !== '') {
-      const searchTerm = search.trim();
-      const searchRegex = { $regex: searchTerm, $options: 'i' };
-      filter.$and = [
-        { $or: [{ title: searchRegex }, { description: searchRegex }] }
+      const searchRegex = new RegExp(search.trim(), 'i');
+      filter.$or = [
+        { title: searchRegex },
+        { description: searchRegex }
       ];
     }
 
-    console.log('🔍 [DEBUG getIdeas] req.query:', req.query, '-> constructed filter:', JSON.stringify(filter));
-
     let sortOptions = { createdAt: -1 };
-    if (sort === 'popular') {
-      sortOptions = { voteCount: -1, createdAt: -1 };
-    } else if (sort === 'recent') {
-      sortOptions = { createdAt: -1 };
-    }
+    if (sort === 'popular') sortOptions = { voteCount: -1, createdAt: -1 };
 
-    const ideas = await Idea.find(filter)
+    // Récupérer les idées depuis MongoDB
+    const rawIdeas = await Idea.find(filter)
       .populate('author', 'firstName lastName email role')
       .populate('createdBy', 'firstName lastName email role')
       .sort(sortOptions);
 
-    console.log('🔍 [DEBUG getIdeas] Found count:', ideas.length);
+    // 4. Filtrer en mémoire pour exclure strictement les soumissions de défis (challengeId défini)
+    const citizenIdeas = rawIdeas.filter((idea) => {
+      const cId = idea.challengeId;
+      return !cId || cId === 'null' || cId === 'undefined' || cId === '';
+    });
+
+    console.log(`✅ [GET /api/ideas] Retour de ${citizenIdeas.length} idées citoyennes (sur ${rawIdeas.length} totales en BDD).`);
 
     return res.status(200).json({
-      count: ideas.length,
-      ideas
+      count: citizenIdeas.length,
+      ideas: citizenIdeas
     });
   } catch (error) {
-    console.error('❌ Erreur lors de la récupération des idées :', error);
+    console.error('❌ Erreur getIdeas:', error);
     return res.status(500).json({
       message: 'Erreur lors du chargement des idées.',
       error: error.message

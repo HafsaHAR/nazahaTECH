@@ -3,15 +3,27 @@ const User = require('../models/User');
 
 const runSeedIdeasIfEmpty = async () => {
   try {
-    const count = await Idea.countDocuments({ challengeId: { $in: [null, '', 'null', 'undefined'] } });
+    const count = await Idea.countDocuments({
+      $or: [
+        { challengeId: null },
+        { challengeId: '' },
+        { challengeId: 'null' },
+        { challengeId: 'undefined' },
+        { challengeId: { $exists: false } }
+      ]
+    });
+
     if (count >= 4) {
-      console.log(`ℹ️ La base de données contient déjà ${count} idées citoyennes. Seeding ignoré.`);
+      console.log(`ℹ️ La base de données contient déjà ${count} idées citoyennes. Seeding d'idées ignoré.`);
       return;
     }
 
     console.log('Seeding des idées citoyennes de la Galerie...');
-    const adminUser = await User.findOne({ role: 'admin' });
-    const authorId = adminUser ? adminUser._id : null;
+    let adminUser = await User.findOne({ role: 'admin' });
+    if (!adminUser) {
+      adminUser = await User.findOne({});
+    }
+    const authorId = adminUser ? adminUser._id : new mongoose.Types.ObjectId();
 
     const sampleIdeas = [
       {
@@ -22,6 +34,7 @@ const runSeedIdeasIfEmpty = async () => {
         author: authorId,
         createdBy: authorId,
         voteCount: 142,
+        voters: [authorId],
         attachments: []
       },
       {
@@ -32,6 +45,7 @@ const runSeedIdeasIfEmpty = async () => {
         author: authorId,
         createdBy: authorId,
         voteCount: 98,
+        voters: [authorId],
         attachments: []
       },
       {
@@ -42,6 +56,7 @@ const runSeedIdeasIfEmpty = async () => {
         author: authorId,
         createdBy: authorId,
         voteCount: 76,
+        voters: [authorId],
         attachments: []
       },
       {
@@ -52,12 +67,13 @@ const runSeedIdeasIfEmpty = async () => {
         author: authorId,
         createdBy: authorId,
         voteCount: 54,
+        voters: [authorId],
         attachments: []
       }
     ];
 
     await Idea.insertMany(sampleIdeas);
-    console.log(`✅ Seeding des idées réussi : ${sampleIdeas.length} idées insérées.`);
+    console.log(`✅ Seeding des idées réussi : ${sampleIdeas.length} idées citoyennes insérées avec succès.`);
   } catch (error) {
     console.error('❌ Erreur seeding des idées :', error.message);
   }

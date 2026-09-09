@@ -9,6 +9,11 @@ services:
       MONGO_INITDB_DATABASE: nazahatech
     volumes:
       - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - nazahatech-network
 
@@ -40,12 +45,16 @@ services:
       CORS_ORIGIN: "*"
       NODE_ENV: production
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - nazahatech-network
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:5000/api
     container_name: nazahatech-frontend
     restart: always
     ports:
