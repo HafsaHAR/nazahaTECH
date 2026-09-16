@@ -16,6 +16,7 @@ import Profile from './pages/Profile';
 import Library from './pages/Library';
 import Initiatives from './pages/Initiatives';
 import InitiativeDetail from './pages/InitiativeDetail';
+import AdminDashboard from './pages/AdminDashboard';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -68,6 +69,7 @@ function AppRoutes() {
         <Route path="/submit-idea" element={<ProtectedRoute><SubmitIdea /></ProtectedRoute>} />
         <Route path="/submit-challenge" element={<ProtectedRoute><SubmitChallengeSubmission /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       </Route>
 
       {/* Redirection par défaut */}

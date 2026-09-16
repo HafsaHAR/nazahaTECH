@@ -58,6 +58,11 @@ export default function Sidebar() {
               <span className="nav-icon">👤</span> {t('nav.profile')}
             </NavLink>
           )}
+          {user?.role === 'admin' && (
+            <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <span className="nav-icon">🛡️</span> Espace Admin
+            </NavLink>
+          )}
         </nav>
       </div>
 
